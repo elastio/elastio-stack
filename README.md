@@ -18,17 +18,12 @@ deploys the Red Stack to your account.
 Be sure to have [`aws` cli version `2`][aws-cli-installation] installed and
 configured with the default profile before running this script.
 
-Clone this repo:
+Run the deployment script with your own parameters insterted for `--stack-name`,
+optional `--out-dir`, etc.
 
 ```bash
-git clone https://github.com/elastio/elastio-stack
-cd elastio-stack
-```
-
-Run the deployment script:
-
-```bash
-./scripts/reds-deploy.sh --stack-name <your_company_name_or_username> --out-dir ./elastio-stack
+curl -s https://raw.githubusercontent.com/elastio/elastio-stack/master/scripts/reds-deploy.sh \
+  | bash -s -- --stack-name <your_company_name_or_username> --out-dir ./elastio-stack
 ```
 
 `--out-dir` parameter here is optional, but recommended. It allows for saving the initialized
