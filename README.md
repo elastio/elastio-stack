@@ -103,4 +103,4 @@ and run `terraform destroy` from there.
 You might be asked to input some variables (if you haven't set them via `TF_VAR_*` env vars yet):
 - `stack_env` should be set to `prod`.
 - `stack_name` should be set to the identifier you passed as `--stack-name`
-- `aws_region` should be passed explicitly (otherwise it defaults to `us-east-2`)
+- `aws_region` should be passed explicitly (otherwise it uses current aws profile's region config)
