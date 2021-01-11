@@ -18,6 +18,15 @@ deploys the Red Stack to your account.
 Be sure to have [`aws` cli version `2`][aws-cli-installation] installed and
 configured with the default profile before running this script.
 
+Clone this repo:
+
+```bash
+git clone https://github.com/elastio/elastio-stack
+cd elastio-stack
+```
+
+Run the deployment script:
+
 ```bash
 ./scripts/reds-deploy.sh --stack-name <your_company_name_or_username> --out-dir ./elastio-stack
 ```
@@ -26,6 +35,8 @@ configured with the default profile before running this script.
 terraform project used to deploy the stack to the specified directory on your filesystem.
 
 You can also override the destination AWS region by specifying `--aws-region` argument.
+
+For more information run the script with `--help` argument.
 
 ## Manual deployment
 
