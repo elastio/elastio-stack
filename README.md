@@ -18,7 +18,7 @@ deploys the Red Stack to your account.
 Be sure to have [`aws` cli version `2`][aws-cli-installation] installed and
 configured with the default profile before running this script.
 
-Run the deployment script with your own parameters insterted for `--stack-name`,
+Run the deployment script with your own parameters inserted for `--stack-name`,
 optional `--out-dir`, etc.
 
 ```bash
