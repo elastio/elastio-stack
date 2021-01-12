@@ -22,8 +22,8 @@ Run the deployment script with your own parameters inserted for `--stack-name`,
 optional `--out-dir`, etc.
 
 ```bash
-curl -s https://raw.githubusercontent.com/elastio/elastio-stack/master/scripts/reds-deploy.sh \
-  | bash -s -- --stack-name <your_company_name_or_username> --out-dir ./elastio-stack
+curl -o ./reds-deploy.sh https://raw.githubusercontent.com/elastio/elastio-stack/master/scripts/reds-deploy.sh
+bash -i ./reds-deploy.sh --stack-name <your_company_name_or_username> --out-dir ./elastio-stack
 ```
 
 `--out-dir` parameter here is optional, but recommended. It allows for saving the initialized
@@ -103,4 +103,4 @@ and run `terraform destroy` from there.
 You might be asked to input some variables (if you haven't set them via `TF_VAR_*` env vars yet):
 - `stack_env` should be set to `prod`.
 - `stack_name` should be set to the identifier you passed as `--stack-name`
-- `aws_region` should be passed explicitly (otherwise it uses current aws profile's region config)
+- `aws_region` should be passed explicitly (otherwise it is `us-east-2` by default)
