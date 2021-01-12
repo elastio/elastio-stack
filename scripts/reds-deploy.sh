@@ -68,6 +68,10 @@ main() {
 
     [ -v aws_region ] || aws_region=$(aws configure get region)
 
+    if [[ -z "$aws_region" ]]; then
+        exit_err 'Could not infer aws region to deploy to. Please configure the aws cli with `aws configure` or pass explicit --aws-region parameter'
+    fi
+
     log_info "Using aws_region: $aws_region"
 
     # Prepare a sandbox on the filesystem where we can save intermediate files
