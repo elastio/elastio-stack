@@ -11,7 +11,7 @@ usage()
 {
     echo "Usage examples:"
     echo "   $me --key-name my_ec2_key --name my_s0_server --type m5d.2xlarge"
-    echo "   $me --k /path/to/key.pem -n my_s0_server -t m5d.2xlarge"
+    echo "   $me -k my_ec2_key -n my_s0_server -t m5ad.2xlarge"
     echo
     echo "  -k | --key-name : A name of an aws EC2 key in the PEM format for the SSH connection to the instance."
     echo
