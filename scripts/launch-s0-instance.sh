@@ -40,7 +40,7 @@ write_files:
       StartLimitInterval=5
       StartLimitBurst=10
       TimeoutStopSec=5min
-      ExecStart=/bin/bash -c '/usr/bin/s0 vault serve s3 --bucket $S0_BUCKET --key-id $S0_KMS $BLOCK_SIZE --server-address 0.0.0.0 --db-path $DB_MOUNT 2>&1 | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g" >> /var/log/s0-service.log'
+      ExecStart=/bin/bash -c '/usr/bin/s0 vault serve s3 --bucket $S0_BUCKET --key-id alias/$S0_KMS $BLOCK_SIZE --server-address 0.0.0.0 --db-path $DB_MOUNT 2>&1 | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g" >> /var/log/s0-service.log'
       Restart=always
       RestartSec=5
 
@@ -72,7 +72,12 @@ runcmd:
 
   # Create s0 vault
   - |
-    s0 vault create s3 --bucket $S0_BUCKET --key-id $S0_KMS 2>&1 | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g" > /var/log/s0-vault-create.log
+    if ! aws s3 ls s3://$S0_BUCKET/vault.json | grep -wsq "vault\.json" ; then
+      echo "The '$S0_BUCKET' bucket doesnt contain a s0 vault yet. Creating one..."
+      s0 vault create s3 --bucket $S0_BUCKET --key-id $S0_KMS 2>&1 | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g" > /var/log/s0-vault-create.log
+    else
+      echo "The vault in the '$S0_BUCKET' bucket already exists."
+    fi
 
   # Prepare and start s0 service
   - |
@@ -91,8 +96,8 @@ EOF
 usage()
 {
     echo "Usage examples:"
-    echo "   $me --ssh-key-name my_ec2_key --instance-name my_s0_server --instance-type m5d.2xlarge --kms-key-alias my_kms_key --bucket-name my_s3_bucket"
-    echo "   $me -s my_ec2_key -n my_s0_server -t m5ad.2xlarge -k my_kms_key -b my_s3_bucket"
+    echo "   $me --ssh-key-name my_ec2_key --instance-name my_s0_server --instance-type m5d.2xlarge --kms-key-alias my_kms_key --bucket-name my_s3_bucket --instance-profile my_profile"
+    echo "   $me -s my_ec2_key -n my_s0_server -t m5ad.2xlarge -k my_kms_key -b my_s3_bucket -p my_profile"
     echo
     echo "  -s | --ssh-key-name       : A name of an aws EC2 key in the PEM format for the SSH connection to the instance."
     echo
@@ -135,7 +140,7 @@ while [ "$1" != "" ]; do
         -t | --instance-type)       shift && instance_type=$1 ;;
         -g | --security-group)      shift && security_group=$1 ;;
         -b | --bucket-name)         shift && bucket_name=$1 ;;
-        -k | --kms-key-alias)       shift && kms_key_alias=$1 ;;
+        -k | --kms-key-alias)       shift && kms_key_alias="${1#alias/}" ;;
         -p | --instance-profile)    shift && instance_profile=$1 ;;
         -z | --shard)               shift && block_size=$1 ;;
         -h | --help)                usage && exit ;;
@@ -181,9 +186,43 @@ case $block_size in
   ;;
 esac
 
-latest_ami=$(aws ec2 describe-images --owners $elastio_aws_id \
-    --filters "Name=name,Values=s0-ami*" "Name=state,Values=available" \
-    --query "reverse(sort_by(Images, &CreationDate))[:1].ImageId" --output text)
+current_region=$AWS_DEFAULT_REGION
+[ -z "$AWS_DEFAULT_REGION" ] && current_region=$(aws configure list | grep region | awk '{print $2}')
+if [ -z "$current_region" ]; then
+    echo "Current region isn't set for the AWS CLI neiser via AWS_DEFAULT_REGION environment variable nor via 'aws configure'."
+    echo "It have to be set to launch an ec2 instance in this region."
+    exit 5
+fi
+
+echo "Validating bucket \"$bucket_name\"..."
+if ! bucket_region=$(aws s3api get-bucket-location --bucket $bucket_name --output text) || [ -z "$bucket_region" ]; then
+    echo "The bucket $bucket_name doesn't exist or you don't own it."
+    exit 6
+fi
+
+if [[ "$current_region" != "$bucket_region" ]]; then
+    echo "The AWS CLI is configured to use the '$current_region' region. And an ec2 instance will be launched in this region."
+    echo "However the bucket '$bucket_name' is located in the different region '$bucket_region'."
+    echo "Please chouse another bucket in the '$current_region' region or change current region to the '$bucket_region'."
+    echo "NOTE: The launched ec2 instance, s3 bucket and KMS key should be in the same region!"
+    exit 7
+fi
+
+echo "Validating KMS key alias \"$kms_key_alias\"..."
+if ! key_description=$(aws kms describe-key --key-id alias/$kms_key_alias); then
+    echo "The KMS key alias '$kms_key_alias' isn't found!"
+    exit 8
+fi
+
+key_region=$(echo $key_description | jq '.KeyMetadata.Arn' | tr -d '"' | cut -d':' -f4)
+
+if [[ "$current_region" != "$key_region" ]]; then
+    echo "The AWS CLI is configured to use the '$current_region' region. And an ec2 instance will be launched in this region."
+    echo "However the KMS key '$kms_key_alias' is located in the different region '$key_region'."
+    echo "Please chouse another KMS key in the '$current_region' region or change current region to the '$key_region'."
+    echo "NOTE: The launched ec2 instance, s3 bucket and KMS key should be in the same region!"
+    exit 9
+fi
 
 if [ -z "$security_group" ]; then
     security_group=$default_security_group
@@ -191,20 +230,35 @@ if [ -z "$security_group" ]; then
         if ! echo "$seq_groups" | jq '.SecurityGroups[].GroupName' | tr -d '"' | grep -q "$security_group" ; then
             if ! sg_id=$(aws ec2 create-security-group --group-name $security_group --description "Ports 22 and 61234 are open to the world for s0 server and ssh" --output text) ; then
                 echo "Failed to create a security group to open ports for s0 server and ssh. Do you have enough permissions?"
-                exit 3
+                exit 10
             fi
             if ! aws ec2 authorize-security-group-ingress --group-id $sg_id --protocol tcp --port 22 --cidr 0.0.0.0/0 ||
                ! aws ec2 authorize-security-group-ingress --group-id $sg_id --protocol tcp --port 61234 --cidr 0.0.0.0/0 ; then
                 echo "Failed to open ports 22 and 61234 for s0 server and ssh!"
-                exit 4
+                exit 11
             fi
         fi
     else
         echo "There is no permission to check existance of the security group '$security_group' and get its ID."
         echo "Please fix permissions to allow operations 'ec2:DescribeSecurityGroups,ec2:DescribeSecurityGroups,ec2:AuthorizeSecurityGroupIngress'"
         echo "or use script parameter '--security-group' instead!"
-        exit 5
+        exit 12
     fi
+fi
+
+echo "Validating instance profile \"$instance_profile\"..."
+if ! aws iam get-instance-profile --instance-profile-name $instance_profile >/dev/null ; then
+    echo "The instance profile '$instance_profile' isn't found!"
+    exit 13
+fi
+
+latest_ami=$(aws ec2 describe-images --owners $elastio_aws_id \
+    --filters "Name=name,Values=s0-ami*" "Name=state,Values=available" \
+    --query "reverse(sort_by(Images, &CreationDate))[:1].ImageId" --output text)
+
+if [ -z "$latest_ami" ]; then
+    echo "Can't find the latest Elastio s0 AMI!"
+    exit 14
 fi
 
 export INSTANCE_NAME=$instance_name
