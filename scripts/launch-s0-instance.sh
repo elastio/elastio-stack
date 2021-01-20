@@ -8,6 +8,10 @@ default_instance_type="m5d.2xlarge"
 default_instance_name="$(whoami)-s0-server"
 default_block_size=fixed
 bootstrap=/tmp/s0-bootstrap.yml
+trust_policy=/tmp/s0-role-trust-policy.json
+role=/tmp/s0-role-policy.json
+role_name="s0-role"
+policy_name="s0-permissions"
 db_mount=/mnt/elastio
 unit_file=/etc/systemd/user/s0.service
 service=s0
@@ -93,6 +97,78 @@ output:
 EOF
 }
 
+
+create_instance_profile()
+{
+    local bucket=$1
+    local key_arn=$2
+    local profile_name=$3
+
+    rm -f $trust_policy
+    cat << EOF > $trust_policy
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": { "Service": "ec2.amazonaws.com"},
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+
+    rm -f $role
+    cat << EOF > $role
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Action": "kms:*",
+            "Resource": "$key_arn"
+        },
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::$bucket"
+        },
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::$bucket/*"
+        }
+    ]
+}
+EOF
+
+    set -eu
+    r_name="${profile_name}-${role_name}"
+    p_name="${profile_name}-${policy_name}"
+    echo "Creating IAM role \"$r_name\""
+    aws iam create-role --role-name $r_name --assume-role-policy-document file://$trust_policy
+
+    echo "Attaching policy \"$p_name\" to the IAM role \"$r_name\""
+    aws iam put-role-policy --role-name $r_name --policy-name $p_name --policy-document file://$role
+    echo "The IAM role \"$r_name\" has these permissions:"
+    cat $role
+    echo
+
+    echo "Creating IAM instance profile \"$profile_name\""
+    aws iam create-instance-profile --instance-profile-name $profile_name
+
+    echo "Adding role \"$r_name\" to the instance profile \"$profile_name\""
+    aws iam add-role-to-instance-profile --instance-profile-name $profile_name --role-name $r_name
+
+    rm -r $trust_policy $role
+
+    # Sleep a bit to avoid an error (InvalidParameterValue: Invalid IAM Instance Profile name) when calling the RunInstances operation.
+    sleep 3
+}
+
 usage()
 {
     echo "Usage examples:"
@@ -116,10 +192,14 @@ usage()
     echo
     echo "  -k | --kms-key-alias      : KMS key alias for the data encription in the s0 vault."
     echo
-    echo "  -p | --instance-profile   : An instance provile with access to the s3 bucket and KMS key from 2 parameters above."
+    echo "  -p | --instance-profile   : A name of the existing instance provile with access to the s3 bucket and KMS key from 2 parameters above."
     echo "                              See AWS docs for more details how to create one:"
     echo "                              https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html"
     echo "                              https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html"
+    echo "                              Or use a parameter '--create-profile' to create it."
+    echo
+    echo "  -c | --create-profile     : Optional. An instance provile name to create. This parameter will have full access to the s3 bucket and KMS key from 3 parameters above."
+    echo "                              This parameter is used instead of the '--instance-profile' parameter in case if you'd like to create it."
     echo
     echo "  -z | --shard              : Optional. Which of the vault's shards to serve. There are 2 possible values: \"fixed\" and \"variable\". The \"fixed\" is default."
     echo "                              - The \"fixed\" selects the shard using fixed-block deduplication."
@@ -142,6 +222,7 @@ while [ "$1" != "" ]; do
         -b | --bucket-name)         shift && bucket_name=$1 ;;
         -k | --kms-key-alias)       shift && kms_key_alias="${1#alias/}" ;;
         -p | --instance-profile)    shift && instance_profile=$1 ;;
+        -c | --create-profile)      shift && new_instance_profile=$1 ;;
         -z | --shard)               shift && block_size=$1 ;;
         -h | --help)                usage && exit ;;
         *)                          echo "Wrong arguments!"
@@ -165,8 +246,16 @@ if [ -z "$ssh_key_name" ]; then
     exit 2
 fi
 
-if [ -z "$kms_key_alias" ] || [ -z "$bucket_name" ] || [ -z "$instance_profile" ]; then
-    echo "The '--instance-profile', '--bucket-name' and '--kms-key-alias' are required parameters. Please specify them."
+if [ -z "$kms_key_alias" ] || [ -z "$bucket_name" ] || ([ -z "$instance_profile" ] && [ -z "$new_instance_profile" ]); then
+    echo "The '--instance-profile' (or '--create-profile'), '--bucket-name', '--kms-key-alias' are required parameters. Please specify them."
+    echo
+    usage
+    exit 3
+fi
+
+if [ ! -z "$instance_profile" ] && [ ! -z "$new_instance_profile" ]; then
+    echo "Both '--instance-profile' and '--create-profile' are specified. Please leave just one."
+    echo "Use '--instance-profile' if you already have it or use '--create-profile' to create it."
     echo
     usage
     exit 3
@@ -244,6 +333,13 @@ if [ -z "$security_group" ]; then
         echo "or use script parameter '--security-group' instead!"
         exit 12
     fi
+fi
+
+if [ ! -z "$new_instance_profile" ]; then
+    echo "Creating instance profile \"$new_instance_profile\"..."
+    kms_key_arn=$(echo $key_description | jq '.KeyMetadata.Arn' | tr -d '"')
+    create_instance_profile $bucket_name $kms_key_arn $new_instance_profile
+    instance_profile=$new_instance_profile
 fi
 
 echo "Validating instance profile \"$instance_profile\"..."
