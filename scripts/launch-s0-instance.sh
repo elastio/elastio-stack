@@ -40,7 +40,7 @@ write_files:
       StartLimitInterval=5
       StartLimitBurst=10
       TimeoutStopSec=5min
-      ExecStart=/bin/bash -c '/usr/bin/s0 --log-output compact vault serve s3 --bucket $S0_BUCKET --key-id $S0_KMS $BLOCK_SIZE --server-address 0.0.0.0 --db-path $DB_MOUNT 2>&1 | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g" >> /var/log/s0-service.log'
+      ExecStart=/bin/bash -c '/usr/bin/s0 vault serve s3 --bucket $S0_BUCKET --key-id $S0_KMS $BLOCK_SIZE --server-address 0.0.0.0 --db-path $DB_MOUNT 2>&1 | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g" >> /var/log/s0-service.log'
       Restart=always
       RestartSec=5
 
@@ -103,23 +103,23 @@ usage()
     echo "                              The default value is \"m5d.2xlarge\"."
     echo
     echo "  -g | --security-group     : Optional. A name of the security group which has ports 22 and 61234 open to the world for SSH and s0 server respectively."
-    echo "                              The grop 'elastio-s0-server' will be created and then used in case if this OR next argument is not specified."
-    echo "                              NOTE: The group existance and the pen ports in the group aren't checked."
+    echo "                              The group 'elastio-s0-server' will be created and then used in case if this OR next argument is not specified."
+    echo "                              NOTE: The group existance and the open ports in the group aren't checked."
     echo "                                    The script may not have permissions and assumes that the group is configured properly."
     echo
     echo "  -b | --bucket-name        : s3 bucket name for s0 vault."
     echo
     echo "  -k | --kms-key-alias      : KMS key alias for the data encription in the s0 vault."
     echo
-    echo "  -p | --instance-profile   : An instance provile with access to the s3 bucket and KMS key from 2 parametrers abowe."
-    echo "                              See aws doscs for more details how to create one:"
+    echo "  -p | --instance-profile   : An instance provile with access to the s3 bucket and KMS key from 2 parameters above."
+    echo "                              See AWS docs for more details how to create one:"
     echo "                              https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html"
     echo "                              https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html"
     echo
-    echo "  -z | --s0-block-size      : Optional. A block size for the s0 shard. There are 2 possible values: \"fixed\" and \"variable\". The \"fixed\" is default."
-    echo "                              - The \"fixed\" selects the shard with a fixed-length block size."
+    echo "  -z | --shard              : Optional. Which of the vault's shards to serve. There are 2 possible values: \"fixed\" and \"variable\". The \"fixed\" is default."
+    echo "                              - The \"fixed\" selects the shard using fixed-block deduplication."
     echo "                                This shard is intended for use with backups of block storage systems like EBS, local disks, and VMs."
-    echo "                              - The \"variable\" selects the shard with a variable-length block size."
+    echo "                              - The \"variable\" selects the shard using variable (i.e. content-defined) deduplication."
     echo "                                This shard is intended for use with backups of file systems, streams, and any other data that isn't organized"
     echo "                                into fixed size blocks."
     echo
@@ -137,7 +137,7 @@ while [ "$1" != "" ]; do
         -b | --bucket-name)         shift && bucket_name=$1 ;;
         -k | --kms-key-alias)       shift && kms_key_alias=$1 ;;
         -p | --instance-profile)    shift && instance_profile=$1 ;;
-        -z | --s0-block-size)       shift && block_size=$1 ;;
+        -z | --shard)               shift && block_size=$1 ;;
         -h | --help)                usage && exit ;;
         *)                          echo "Wrong arguments!"
                                     usage && exit 15 ;;
@@ -146,8 +146,8 @@ while [ "$1" != "" ]; do
 done
 
 if ! which aws >/dev/null 2>&1 || [[ $(aws --version | cut -d' ' -f1 | cut -d'/' -f2 | cut -d'.' -f1) < "2" ]]; then
-    echo "Please install aws cli v.2 and try again."
-    echo "You can use a package manager i.e. dnf/yum or apt or follow this instruction https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-linux.html."
+    echo "Please install AWS CLI v2 and try again."
+    echo "You can use a package manager i.e. dnf/yum or apt or follow these instructions https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-linux.html."
     exit 1
 fi
 
@@ -187,8 +187,8 @@ latest_ami=$(aws ec2 describe-images --owners $elastio_aws_id \
 
 if [ -z "$security_group" ]; then
     security_group=$default_security_group
-    if seq_gropups=$(aws ec2 describe-security-groups); then
-        if ! echo "$seq_gropups" | jq '.SecurityGroups[].GroupName' | tr -d '"' | grep -q "$security_group" ; then
+    if seq_groups=$(aws ec2 describe-security-groups); then
+        if ! echo "$seq_groups" | jq '.SecurityGroups[].GroupName' | tr -d '"' | grep -q "$security_group" ; then
             if ! sg_id=$(aws ec2 create-security-group --group-name $security_group --description "Ports 22 and 61234 are open to the world for s0 server and ssh" --output text) ; then
                 echo "Failed to create a security group to open ports for s0 server and ssh. Do you have enough permissions?"
                 exit 3
