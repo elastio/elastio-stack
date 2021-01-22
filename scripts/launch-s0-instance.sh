@@ -238,7 +238,7 @@ if ! which aws >/dev/null 2>&1 || [[ $(aws --version | cut -d' ' -f1 | cut -d'/'
 fi
 
 # Try to install 'jq' if it's not existing or fail
-if [ -z "$(which jq)" ]; then
+if ! which jq; then
     # if we have 'apt' then try to install it by 'apt'
     if which apt; then
         if ! sudo apt install jq; then
