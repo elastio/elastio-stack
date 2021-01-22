@@ -237,6 +237,27 @@ if ! which aws >/dev/null 2>&1 || [[ $(aws --version | cut -d' ' -f1 | cut -d'/'
     exit 1
 fi
 
+# Try to install 'jq' if it's not existing or fail
+if [ -z "$(which jq)" ]; then
+    # if we have 'apt' then try to install it by 'apt'
+    if which apt; then
+        if ! sudo apt install jq; then
+            echo "Failed to install 'jq' by 'apt"
+            exit 1
+        fi
+    # if we have 'yum' then try to install it by 'yum'
+    elif which yum; then
+        if ! sudo yum install jq; then
+            echo "Failed to install 'jq' by 'yum'"
+            exit 1
+        fi
+    # fail otherwise
+    else
+        echo "The util 'jq' is not installed, the script unable to find 'apt' and 'yum' to install it"
+        exit 1
+    fi
+fi
+
 set -e
 
 if [ -z "$ssh_key_name" ]; then
