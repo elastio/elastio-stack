@@ -237,27 +237,6 @@ if ! which aws >/dev/null 2>&1 || [[ $(aws --version | cut -d' ' -f1 | cut -d'/'
     exit 1
 fi
 
-# Try to install 'jq' if it's not existing or fail
-if ! which jq; then
-    # if we have 'apt' then try to install it by 'apt'
-    if which apt; then
-        if ! sudo apt install jq; then
-            echo "Failed to install 'jq' by 'apt"
-            exit 1
-        fi
-    # if we have 'yum' then try to install it by 'yum'
-    elif which yum; then
-        if ! sudo yum install jq; then
-            echo "Failed to install 'jq' by 'yum'"
-            exit 1
-        fi
-    # fail otherwise
-    else
-        echo "The util 'jq' is not installed, the script unable to find 'apt' and 'yum' to install it"
-        exit 1
-    fi
-fi
-
 set -e
 
 if [ -z "$ssh_key_name" ]; then
@@ -319,17 +298,18 @@ if [[ "$current_region" != "$bucket_region" ]]; then
 fi
 
 echo "Validating KMS key alias \"$kms_key_alias\"..."
-if ! key_description=$(aws kms describe-key --key-id alias/$kms_key_alias); then
+if ! kms_key_description=$(aws kms describe-key --key-id alias/$kms_key_alias --output json); then
     echo "The KMS key alias '$kms_key_alias' isn't found!"
     exit 8
 fi
 
-key_region=$(echo $key_description | jq '.KeyMetadata.Arn' | tr -d '"' | cut -d':' -f4)
+kms_key_arn=$(echo "$kms_key_description" | grep "arn:aws:kms" |  tr -d '",' | awk '{ print $NF}')
+kms_key_region=$(echo "$kms_key_arn" | cut -d':' -f4)
 
-if [[ "$current_region" != "$key_region" ]]; then
+if [[ "$current_region" != "$kms_key_region" ]]; then
     echo "The AWS CLI is configured to use the '$current_region' region. And an ec2 instance will be launched in this region."
-    echo "However the KMS key '$kms_key_alias' is located in the different region '$key_region'."
-    echo "Please chouse another KMS key in the '$current_region' region or change current region to the '$key_region'."
+    echo "However the KMS key '$kms_key_alias' is located in the different region '$kms_key_region'."
+    echo "Please chouse another KMS key in the '$current_region' region or change current region to the '$kms_key_region'."
     echo "NOTE: The launched ec2 instance, s3 bucket and KMS key should be in the same region!"
     exit 9
 fi
@@ -337,7 +317,7 @@ fi
 if [ -z "$security_group" ]; then
     security_group=$default_security_group
     if seq_groups=$(aws ec2 describe-security-groups); then
-        if ! echo "$seq_groups" | jq '.SecurityGroups[].GroupName' | tr -d '"' | grep -q "$security_group" ; then
+        if ! aws ec2 describe-security-groups --group-names $security_group >/dev/null 2>&1 ; then
             if ! sg_id=$(aws ec2 create-security-group --group-name $security_group --description "Ports 22 and 61234 are open to the world for s0 server and ssh" --output text) ; then
                 echo "Failed to create a security group to open ports for s0 server and ssh. Do you have enough permissions?"
                 exit 10
@@ -358,7 +338,6 @@ fi
 
 if [ ! -z "$new_instance_profile" ]; then
     echo "Creating instance profile \"$new_instance_profile\"..."
-    kms_key_arn=$(echo $key_description | jq '.KeyMetadata.Arn' | tr -d '"')
     create_instance_profile $bucket_name $kms_key_arn $new_instance_profile
     instance_profile=$new_instance_profile
 fi
@@ -403,15 +382,13 @@ instance_json=$(aws ec2 run-instances \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$instance_name}]" \
     --output json)
 
-#echo $instance_json | jq "."
-
-instance_id=$(echo $instance_json | jq ".Instances[].InstanceId" -r)
+instance_id=$(echo "$instance_json" | grep InstanceId | tr -d '",' | awk '{print $NF}')
 echo "Launched EC2 instance id $instance_id"
 
 echo "Querying instance info for public DNS..."
 instance_info=$(aws ec2 describe-instances --instance-ids $instance_id --output json)
 
-instance_dns=$(echo $instance_info | jq ".Reservations[].Instances[].PublicDnsName" -r)
+instance_dns=$(echo "$instance_info" | grep PublicDnsName | tr -d '",' | awk '{print $NF}')
 
 echo "The instance DNS is $instance_dns"
 echo
