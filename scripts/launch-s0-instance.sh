@@ -166,7 +166,7 @@ EOF
     rm -r $trust_policy $role
 
     # Sleep a bit to avoid an error (InvalidParameterValue: Invalid IAM Instance Profile name) when calling the RunInstances operation.
-    sleep 3
+    sleep 10
 }
 
 usage()
