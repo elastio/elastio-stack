@@ -102,7 +102,7 @@ usage()
     echo "  -c | --cli-only       : Install Elastio CLI only, without change tracking driver elastio-snap."
     echo
     echo "  -d | --driver-only    : Install change tracking driver elastio-snap only, without Elastio CLI."
-    echo "                          NOTE: There is no Elastio-Snap packages for Fedora (kernel 5.8 and newer) for now."
+    echo "                          NOTE: There are no elastio-snap packages for Fedora (kernel 5.8 and newer) as of yet."
     echo "                                So, temporarily this option does nothing on Fedora."
     echo
     echo "  -u | --uninstall      : Uninstall all Elastio packages."
@@ -167,7 +167,7 @@ case ${dist_name} in
         echo "Warning: Oracle Linix and Scientific Linux are not officially supported!"
         if [ -z $force ]; then
             echo "We can try to install packages for CentOS on your system."
-            echo "Add '--force' to insist on the installation. But keep in mind, you act at your own risk!"
+            echo "Add '--force' to insist on the installation. But beware this isn't officially supported!"
             exit 1
         fi
     ;;&
@@ -184,7 +184,7 @@ case ${dist_name} in
 
     fedora | fc )
         if [ ! -z "$driver" ]; then
-            echo "There is no Elastio-Snap packages for Fedora (kernel 5.8 and newer) for now. Ignoring driver installation..."
+            echo "There are no elastio-snap packages for Fedora (kernel 5.8 and newer) yet. Ignoring driver installation..."
             unset driver
         fi
 
