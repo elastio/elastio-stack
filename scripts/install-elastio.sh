@@ -1,7 +1,6 @@
 #!/bin/bash
 
-me=$(basename $0)
-dir=$(readlink -f $(dirname $0))
+me="./install-elastio.sh"
 
 cent_fedora_kernel_devel_install()
 {
