@@ -175,7 +175,7 @@ case ${dist_name} in
         case ${dist_ver} in
             7 | 8 ) cent_fedora_install CentOS $(rpm -E %rhel) el ;;
             * )
-                echo "CentOS/RHEL and derivatives like Oracle Linux and Scientific Linux 7 and 8 are supported. Current distro version $dist_ver isn't supported."
+                echo "CentOS/RHEL versions 7 and 8 are supported. Current distro version $dist_ver isn't supported."
                 exit 1
             ;;
         esac
