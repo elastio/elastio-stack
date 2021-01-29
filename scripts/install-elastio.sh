@@ -101,7 +101,7 @@ usage()
     echo
     echo "  -c | --cli-only       : Install Elastio CLI only, without change tracking driver elastio-snap."
     echo
-    echo "  -d | --driver-only    : Install changeds-tracking driver Elastio-Snap only, without Elastio CLI."
+    echo "  -d | --driver-only    : Install change tracking driver elastio-snap only, without Elastio CLI."
     echo "                          NOTE: There is no Elastio-Snap packages for Fedora (kernel 5.8 and newer) for now."
     echo "                                So, temporarily this option does nothing on Fedora."
     echo
