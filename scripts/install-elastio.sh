@@ -3,7 +3,7 @@
 me=$(basename $0)
 dir=$(readlink -f $(dirname $0))
 
-kernel_devel_install()
+cent_fedora_kernel_devel_install()
 {
     if ! yum install -y kernel-devel-$(uname -r) kernel-devel ; then
         echo
@@ -18,7 +18,7 @@ kernel_devel_install()
 cent7_amazon_install()
 {
     if [ ! -z "$driver" ]; then
-        kernel_devel_install $1
+        cent_fedora_kernel_devel_install $1
         yum install -y dkms-elastio-snap elastio-snap-utils
     fi
     if [ ! -z "$cli" ]; then
@@ -30,11 +30,11 @@ cent8_fedora_install()
 {
     if [ ! -z "$driver" ] && [ ! -z "$cli" ]; then
         # Install elastio and driver as dependency
-        kernel_devel_install $1
+        cent_fedora_kernel_devel_install $1
         yum install -y elastio
     elif [ ! -z "$driver" ]; then
         # Install just driver
-        kernel_devel_install $1
+        cent_fedora_kernel_devel_install $1
         yum install -y dkms-elastio-snap elastio-snap-utils
     elif [ ! -z "$cli" ]; then
         # Install just elastio w/o driver as dependency
