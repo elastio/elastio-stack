@@ -353,7 +353,7 @@ latest_ami=$(aws ec2 describe-images --owners $elastio_aws_id \
     --query "reverse(sort_by(Images, &CreationDate))[:1].ImageId" --output text)
 
 if [ -z "$latest_ami" ]; then
-    echo "Can't find the latest Elastio s0 AMI!"
+    echo "The Elastio s0 AMI was not found in region $current_region. This usually means the region is not one Elastio currently supports."
     exit 14
 fi
 
