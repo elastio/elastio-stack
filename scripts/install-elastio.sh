@@ -44,7 +44,7 @@ cent8_fedora_install()
 cent_fedora_install()
 {
     yum localinstall -y https://repo.assur.io/master/linux/rpm/$1/$2/x86_64/Packages/elastio-repo-0.0.2-1.$3$2.noarch.rpm
-    which dnf >/dev/null 2>&1
+    which dnf >/dev/null 2>&1 &&
         cent8_fedora_install $1 $2 $3 ||
         cent7_amazon_install $1 $2 $3
 }
@@ -159,7 +159,7 @@ case ${dist_name} in
             echo "The Amazon Linux 2 is only supported. Current Amazon Linux $dist_ver isn't supported."
             exit 1
         fi
-        cent7_amazon_install Amazon $(rpm -E %amzn) amzn
+        cent_fedora_install Amazon $(rpm -E %amzn) amzn
     ;;
 
     scientific | sl | oracle | ol )
