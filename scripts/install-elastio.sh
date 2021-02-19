@@ -182,8 +182,8 @@ case ${dist_name} in
     ;;
 
     fedora | fc )
-        if [ ! -z "$driver" ]; then
-            echo "There are no elastio-snap packages for Fedora (kernel 5.8 and newer) yet. Ignoring driver installation..."
+        if [ ! -z "$driver" ] &&  [ $dist_ver -gt 31 ]; then
+            echo "There are no elastio-snap packages for Fedora 32 and newer (kernel 5.9+) yet. Ignoring driver installation..."
             unset driver
         fi
 
