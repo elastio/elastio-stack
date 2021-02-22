@@ -1,6 +1,7 @@
 #!/bin/bash
 
 me="./install-elastio.sh"
+default_branch=release
 
 cent_fedora_kernel_devel_install()
 {
@@ -43,7 +44,7 @@ cent8_fedora_install()
 
 cent_fedora_install()
 {
-    yum localinstall -y https://repo.assur.io/master/linux/rpm/$1/$2/x86_64/Packages/elastio-repo-0.0.2-1.$3$2.noarch.rpm
+    yum localinstall -y $repo_url/rpm/$1/$2/x86_64/Packages/elastio-repo-0.0.2-1.$3$2.noarch.rpm
     which dnf >/dev/null 2>&1 &&
         cent8_fedora_install $1 $2 $3 ||
         cent7_amazon_install $1 $2 $3
@@ -64,7 +65,7 @@ deb_ubu_install()
     fi
 
     pkg=elastio-repo_0.0.2-1debian${debian_ver}_all.deb
-    wget https://repo.assur.io/master/linux/deb/Debian/${debian_ver}/pool/$pkg
+    wget $repo_url/deb/Debian/${debian_ver}/pool/$pkg
     dpkg -i $pkg && rm -f $pkg
     apt-get update
     if [ ! -z "$driver" ] && [ ! -z "$cli" ]; then
@@ -106,6 +107,8 @@ usage()
     echo
     echo "  -u | --uninstall      : Uninstall all Elastio packages."
     echo
+    echo "  -b | --branch         : Use non-default unstable channel of Elastio packages. It's equal to the branch name. For developer use only!"
+    echo
     echo "  -h | --help           : Show this usage help."
 }
 
@@ -115,6 +118,7 @@ while [ "$1" != "" ]; do
         -d | --driver-only)     driver=1 ;;
         -u | --uninstall)       uninstall=1 ;;
         -f | --force)           force=1 ;;
+        -b | --branch)          shift && branch=$1 ;;
         -h | --help)            usage && exit ;;
         *)                      echo "Wrong arguments!"
                                 usage && exit 15 ;;
@@ -128,6 +132,9 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 set -e
+
+[ -z "$branch" ] && branch=$default_branch
+repo_url=https://repo.assur.io/$branch/linux
 
 if [ ! -z "$uninstall" ]; then
     uninstall_all
