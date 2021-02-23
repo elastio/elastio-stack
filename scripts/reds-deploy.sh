@@ -11,7 +11,7 @@ set -eu -o pipefail
 export PS4='+ [${BASH_SOURCE[0]##*/}:${LINENO}${FUNCNAME[0]:+:${FUNCNAME[0]}}] '
 
 reds_tar_name='reds.tar.gz'
-reds_tar_url="https://elastio-aws-lambda-binaries.s3.us-east-2.amazonaws.com/prod/${reds_tar_name}"
+reds_tar_url="http://repo.assur.io/release/${reds_tar_name}"
 # Pinned version of terraform
 tf_version=0.14.3
 
