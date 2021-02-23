@@ -1,5 +1,5 @@
 [terraform-download]: https://www.terraform.io/downloads.html
-[red-stack-tar]: https://elastio-aws-lambda-binaries.s3.us-east-2.amazonaws.com/prod/reds.tar.gz
+[red-stack-tar]: http://repo.assur.io/release/reds.tar.gz
 [aws-cli-installation]: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html
 
 # elastio
