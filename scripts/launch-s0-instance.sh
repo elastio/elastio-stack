@@ -188,6 +188,9 @@ usage()
     echo "                              NOTE: The group existance and the open ports in the group aren't checked."
     echo "                                    The script may not have permissions and assumes that the group is configured properly."
     echo
+    echo "  -n | --subnet-id          : Optional. A subnet ID to use instead of the default subnet associated with the default VPC. Obligatory if you have no default VPC."
+    echo "                              Mandatory if you don't have a default VPC. Use the subnet ID associated with the non-default VPC, which you would like to use in this case."
+    echo
     echo "  -b | --bucket-name        : s3 bucket name for s0 vault."
     echo
     echo "  -k | --kms-key-alias      : KMS key alias for the data encription in the s0 vault."
@@ -218,6 +221,7 @@ while [ "$1" != "" ]; do
         -s | --ssh-key-name)        shift && ssh_key_name=$1 ;;
         -n | --instance-name)       shift && instance_name=$1 ;;
         -t | --instance-type)       shift && instance_type=$1 ;;
+        -n | --subnet-id)           shift && subnet_id=$1 ;;
         -g | --security-group)      shift && security_group=$1 ;;
         -b | --bucket-name)         shift && bucket_name=$1 ;;
         -k | --kms-key-alias)       shift && kms_key_alias="${1#alias/}" ;;
@@ -237,7 +241,7 @@ if ! which aws >/dev/null 2>&1 || [[ $(aws --version | cut -d' ' -f1 | cut -d'/'
     exit 1
 fi
 
-set -e
+set -e -o pipefail
 
 if [ -z "$ssh_key_name" ]; then
     echo "Please specify the '--ssh-key-name' parameter. Otherwise, you won't be able to connect to the running instance via ssh!"
@@ -314,11 +318,28 @@ if [[ "$current_region" != "$kms_key_region" ]]; then
     exit 9
 fi
 
+if ! aws ec2 describe-vpcs --filters "Name=isDefault, Values=true" --output text | grep default | grep -q True && [ -z "$subnet_id" ]; then
+    echo "There is no default VPC in your profile. Please specify an argument \"--subnet-id\" with an ID of a subnet, associated with the VPC which you'd like to use."
+    exit 15
+fi
+
 if [ -z "$security_group" ]; then
     security_group=$default_security_group
     if seq_groups=$(aws ec2 describe-security-groups); then
-        if ! aws ec2 describe-security-groups --group-names $security_group >/dev/null 2>&1 ; then
-            if ! sg_id=$(aws ec2 create-security-group --group-name $security_group --description "Ports 22 and 61234 are open to the world for s0 server and ssh" --output text) ; then
+        vpc_sg_args=""
+        if [ -n "$subnet_id" ]; then
+            # Find VPC ID by subnet ID
+            if ! vpc_id=$(aws ec2 describe-subnets --subnet-ids $subnet_id --output json | grep VpcId | tr -d '",' | awk '{ print $NF}') ; then
+                echo "Failed to get non-default VPC ID by the subnet ID $subnet_id. Can't create a security group for the non-default VPC!"
+                exit 16
+            fi
+            vpc_sg_args="Name=vpc-id,Values=$vpc_id"
+            vpc_cg_create_args="--vpc-id $vpc_id"
+        fi
+        if ! aws ec2 describe-security-groups --filters Name=group-name,Values=$security_group $vpc_sg_args | grep -q GroupId ; then
+            if ! sg_id=$(aws ec2 create-security-group $vpc_cg_create_args --group-name $security_group \
+                                                       --description "Ports 22 and 61234 are open to the world for s0 server and ssh" \
+                                                       --output text ) ; then
                 echo "Failed to create a security group to open ports for s0 server and ssh. Do you have enough permissions?"
                 exit 10
             fi
@@ -328,6 +349,7 @@ if [ -z "$security_group" ]; then
                 exit 11
             fi
         fi
+        [ -z "$sg_id" ] && sg_id=$(aws ec2 describe-security-groups --filters Name=group-name,Values=$security_group $vpc_sg_args | grep GroupId | head -1 | tr -d '",' | awk '{print $NF}')
     else
         echo "There is no permission to check existance of the security group '$security_group' and get its ID."
         echo "Please fix permissions to allow operations 'ec2:DescribeSecurityGroups,ec2:DescribeSecurityGroups,ec2:AuthorizeSecurityGroupIngress'"
@@ -370,6 +392,9 @@ create_s0_bootstrap
 
 echo "Launching \"$instance_name\" (instance type $instance_type) with the latest Elastio s0 AMI ($latest_ami)"
 
+aws_subnet_args=""
+[ -n "$subnet_id" ] && aws_subnet_args="--subnet-id $subnet_id"
+
 instance_json=$(aws ec2 run-instances \
     --image-id "$latest_ami" \
     --instance-type "$instance_type" \
@@ -378,9 +403,9 @@ instance_json=$(aws ec2 run-instances \
     --ebs-optimized \
     --block-device-mappings "DeviceName=/dev/xvda,Ebs={VolumeSize=30}" \
     --user-data file://$bootstrap \
-    --security-groups "$security_group" \
+    --security-group-ids "$sg_id" \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$instance_name}]" \
-    --output json)
+    --output json $aws_subnet_args)
 
 instance_id=$(echo "$instance_json" | grep InstanceId | tr -d '",' | awk '{print $NF}')
 echo "Launched EC2 instance id $instance_id"
@@ -388,8 +413,20 @@ echo "Launched EC2 instance id $instance_id"
 echo "Querying instance info for public DNS..."
 instance_info=$(aws ec2 describe-instances --instance-ids $instance_id --output json)
 
-instance_dns=$(echo "$instance_info" | grep PublicDnsName | tr -d '",' | awk '{print $NF}')
-
-echo "The instance DNS is $instance_dns"
-echo
-echo "SSH into the instance with 'ssh ec2-user@$instance_dns' using key $ssh_key_name."
+instance_dns=$(echo "$instance_info" | grep PublicDnsName | head -1 | tr -d '",' | awk '{print $NF}')
+if [ "$instance_dns" == "PublicDnsName:" ]; then
+    if public_ip=$(echo "$instance_info" | grep PublicIpAddress | head -1 | tr -d '",' | awk '{print $NF}') && [ -n "$public_ip" ] && [ "$public_ip" != "PublicIpAddress:" ] ; then
+        echo
+        echo "The instance has no public DNS but has public IP. It seems you are using non-default VPC with the disabled \"DNS hostnames\"."
+        echo
+        echo "SSH into the instance with 'ssh ec2-user@$public_ip' using key $ssh_key_name."
+    else
+        echo "The instance has no public DNS. It seems you are using non-default VPC and a subnet without \"auto-assign public IPv4 address\" enabled."
+        private_ip=$(echo "$instance_info" | grep -w PrivateIpAddress | head -1 | tr -d '",' | awk '{print $NF}')
+        echo "The started ec2 instance is available just in the internal subnet by the private IP: $private_ip"
+    fi
+else
+    echo "The instance DNS is $instance_dns"
+    echo
+    echo "SSH into the instance with 'ssh ec2-user@$instance_dns' using key $ssh_key_name."
+fi
