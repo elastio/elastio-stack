@@ -188,7 +188,7 @@ usage()
     echo "                              NOTE: The group existance and the open ports in the group aren't checked."
     echo "                                    The script may not have permissions and assumes that the group is configured properly."
     echo
-    echo "  -n | --subnet-id          : Optional. A subnet ID to use instead of the default subnet associated with the default VPC. Obligatory if you have no default VPC."
+    echo "  -n | --subnet-id          : Optional. A subnet ID to use instead of the default subnet associated with the default VPC."
     echo "                              Mandatory if you don't have a default VPC. Use the subnet ID associated with the non-default VPC, which you would like to use in this case."
     echo
     echo "  -b | --bucket-name        : s3 bucket name for s0 vault."
