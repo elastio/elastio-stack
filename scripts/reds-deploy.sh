@@ -63,7 +63,7 @@ main() {
     # Check if the user has the proper version of aws cli installed
     local aws_version_output
     aws_version_output=$(aws --version);
-    if [[ ! "$aws_version_output" =~ aws-cli/1.* ]]; then
+    if [[ ! $aws_version_output =~ aws-cli/2.* ]]; then
         local msg="Found version of aws cli: $aws_version_output"
         msg+=$'\nHowever, we required aws cli of version 2.\n'
         msg+=$'Please follow these docs to install one: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html\n'
@@ -160,7 +160,7 @@ get_terraform() {
     # Check if the user already has the proper version of terraform installed
     local tf_version_output
     if tf_version_output=$(terraform --version); then
-        if [[ "$tf_version_output" =~ Terraform\ v${tf_version}.* ]]; then
+        if [[ $tf_version_output =~ Terraform\ v${tf_version}.* ]]; then
             log_info "Found already installed Terraform v$tf_version."
             echo 'terraform'
             return 0
