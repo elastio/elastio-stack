@@ -53,11 +53,22 @@ main() {
     done
 
     # Verify the commands we are going to use are present ahead of time
+    assert_cmd_exists aws
     assert_cmd_exists mktemp
     assert_cmd_exists mkdir
     assert_cmd_exists rm
     assert_cmd_exists tar
     assert_cmd_exists unzip
+
+    # Check if the user has the proper version of aws cli installed
+    local aws_version_output
+    aws_version_output=$(aws --version);
+    if [[ ! "$aws_version_output" =~ aws-cli/1.* ]]; then
+        local msg="Found version of aws cli: $aws_version_output"
+        msg+=$'\nHowever, we required aws cli of version 2.\n'
+        msg+=$'Please follow these docs to install one: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html\n'
+        exit_err "$msg"
+    fi
 
     # Validate the arguments and set proper defaults
     if [ ! -v stack_name ]; then
@@ -199,7 +210,7 @@ log_error() {
 }
 
 exit_err() {
-    log_error "aborting due to the following error: $1" >&2
+    log_error "$(printf 'aborting due to the following error:\n%s\n' "$1")" >&2
     exit 1
 }
 
