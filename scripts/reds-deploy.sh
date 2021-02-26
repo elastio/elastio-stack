@@ -64,9 +64,12 @@ main() {
     local aws_version_output
     aws_version_output=$(aws --version);
     if [[ ! $aws_version_output =~ aws-cli/2.* ]]; then
-        local msg="Found version of aws cli: $aws_version_output"
-        msg+=$'\nHowever, we required aws cli of version 2.\n'
-        msg+=$'Please follow these docs to install one: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html\n'
+        local msg=$(cat <<EOF
+aws cli version 2 is required.
+Found version $aws_version_output
+Please follow the installation instructions: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html
+EOF
+)
         exit_err "$msg"
     fi
 
