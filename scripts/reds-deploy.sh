@@ -53,11 +53,25 @@ main() {
     done
 
     # Verify the commands we are going to use are present ahead of time
+    assert_cmd_exists aws
     assert_cmd_exists mktemp
     assert_cmd_exists mkdir
     assert_cmd_exists rm
     assert_cmd_exists tar
     assert_cmd_exists unzip
+
+    # Check if the user has the proper version of aws cli installed
+    local aws_version_output
+    aws_version_output=$(aws --version);
+    if [[ ! $aws_version_output =~ aws-cli/2.* ]]; then
+        local msg=$(cat <<EOF
+aws cli version 2 is required.
+Found version $aws_version_output
+Please follow the installation instructions: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html
+EOF
+)
+        exit_err "$msg"
+    fi
 
     # Validate the arguments and set proper defaults
     if [ ! -v stack_name ]; then
@@ -149,7 +163,7 @@ get_terraform() {
     # Check if the user already has the proper version of terraform installed
     local tf_version_output
     if tf_version_output=$(terraform --version); then
-        if [[ "$tf_version_output" =~ Terraform\ v${tf_version}.* ]]; then
+        if [[ $tf_version_output =~ Terraform\ v${tf_version}.* ]]; then
             log_info "Found already installed Terraform v$tf_version."
             echo 'terraform'
             return 0
@@ -199,7 +213,7 @@ log_error() {
 }
 
 exit_err() {
-    log_error "aborting due to the following error: $1" >&2
+    log_error "$(printf 'aborting due to the following error:\n%s\n' "$1")" >&2
     exit 1
 }
 
