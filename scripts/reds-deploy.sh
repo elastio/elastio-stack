@@ -80,7 +80,7 @@ EOF
         exit 2
     fi
 
-    [ -v aws_region ] || aws_region=$(aws configure get region)
+    [ -v aws_region ] || aws_region=$(aws configure get region || true)
 
     if [[ -z "$aws_region" ]]; then
         exit_err 'Could not infer aws region to deploy to. Please configure the aws cli with `aws configure` or pass explicit --aws-region parameter'
