@@ -243,21 +243,21 @@ fi
 
 set -e -o pipefail
 
-if [ -z "$ssh_key_name" ]; then
+if [ -z "${ssh_key_name-}" ]; then
     echo "Please specify the '--ssh-key-name' parameter. Otherwise, you won't be able to connect to the running instance via ssh!"
     echo
     usage
     exit 2
 fi
 
-if [ -z "$kms_key_alias" ] || [ -z "$bucket_name" ] || ([ -z "$instance_profile" ] && [ -z "$new_instance_profile" ]); then
+if [ -z "${kms_key_alias-}" ] || [ -z "${bucket_name-}" ] || ([ -z "${instance_profile-}" ] && [ -z "${new_instance_profile-}" ]); then
     echo "The '--instance-profile' (or '--create-profile'), '--bucket-name', '--kms-key-alias' are required parameters. Please specify them."
     echo
     usage
     exit 3
 fi
 
-if [ ! -z "$instance_profile" ] && [ ! -z "$new_instance_profile" ]; then
+if [ ! -z "${instance_profile-}" ] && [ ! -z "${new_instance_profile-}" ]; then
     echo "Both '--instance-profile' and '--create-profile' are specified. Please leave just one."
     echo "Use '--instance-profile' if you already have it or use '--create-profile' to create it."
     echo
@@ -265,9 +265,9 @@ if [ ! -z "$instance_profile" ] && [ ! -z "$new_instance_profile" ]; then
     exit 3
 fi
 
-[ -z "$instance_name" ] && instance_name=$default_instance_name
-[ -z "$instance_type" ] && instance_type=$default_instance_type
-[ -z "$block_size" ]    && block_size=$default_block_size
+[ -z "${instance_name-}" ] && instance_name=$default_instance_name
+[ -z "${instance_type-}" ] && instance_type=$default_instance_type
+[ -z "${block_size-}" ]    && block_size=$default_block_size
 
 case $block_size in
   fixed)    ;;
@@ -279,9 +279,11 @@ case $block_size in
   ;;
 esac
 
-current_region=$AWS_DEFAULT_REGION
-[ -z "$AWS_DEFAULT_REGION" ] && current_region=$(aws configure list | grep region | awk '{print $2}')
-if [ -z "$current_region" ]; then
+[ -z "${AWS_DEFAULT_REGION-}" ] &&
+    current_region=$(aws configure list | grep region | awk '{print $2}') ||
+    current_region=$AWS_DEFAULT_REGION
+
+if [ -z "${current_region-}" ]; then
     echo "Current region isn't set for the AWS CLI neiser via AWS_DEFAULT_REGION environment variable nor via 'aws configure'."
     echo "It have to be set to launch an ec2 instance in this region."
     exit 5
@@ -318,16 +320,16 @@ if [[ "$current_region" != "$kms_key_region" ]]; then
     exit 9
 fi
 
-if ! aws ec2 describe-vpcs --filters "Name=isDefault, Values=true" --output text | grep default | grep -q True && [ -z "$subnet_id" ]; then
+if ! aws ec2 describe-vpcs --filters "Name=isDefault, Values=true" --output text | grep default | grep -q True && [ -z "${subnet_id-}" ]; then
     echo "There is no default VPC in your profile. Please specify an argument \"--subnet-id\" with an ID of a subnet, associated with the VPC which you'd like to use."
     exit 15
 fi
 
-if [ -z "$security_group" ]; then
+if [ -z "${security_group-}" ]; then
     security_group=$default_security_group
     if seq_groups=$(aws ec2 describe-security-groups); then
         vpc_sg_args=""
-        if [ -n "$subnet_id" ]; then
+        if [ -n "${subnet_id-}" ]; then
             # Find VPC ID by subnet ID
             if ! vpc_id=$(aws ec2 describe-subnets --subnet-ids $subnet_id --output json | grep VpcId | tr -d '",' | awk '{ print $NF}') ; then
                 echo "Failed to get non-default VPC ID by the subnet ID $subnet_id. Can't create a security group for the non-default VPC!"
@@ -349,7 +351,7 @@ if [ -z "$security_group" ]; then
                 exit 11
             fi
         fi
-        [ -z "$sg_id" ] && sg_id=$(aws ec2 describe-security-groups --filters Name=group-name,Values=$security_group $vpc_sg_args | grep GroupId | head -1 | tr -d '",' | awk '{print $NF}')
+        [ -z "${sg_id-}" ] && sg_id=$(aws ec2 describe-security-groups --filters Name=group-name,Values=$security_group $vpc_sg_args | grep GroupId | head -1 | tr -d '",' | awk '{print $NF}')
     else
         echo "There is no permission to check existance of the security group '$security_group' and get its ID."
         echo "Please fix permissions to allow operations 'ec2:DescribeSecurityGroups,ec2:DescribeSecurityGroups,ec2:AuthorizeSecurityGroupIngress'"
@@ -358,7 +360,7 @@ if [ -z "$security_group" ]; then
     fi
 fi
 
-if [ ! -z "$new_instance_profile" ]; then
+if [ ! -z "${new_instance_profile-}" ]; then
     echo "Creating instance profile \"$new_instance_profile\"..."
     create_instance_profile $bucket_name $kms_key_arn $new_instance_profile
     instance_profile=$new_instance_profile
@@ -374,7 +376,7 @@ latest_ami=$(aws ec2 describe-images --owners $elastio_aws_id \
     --filters "Name=name,Values=s0-ami*" "Name=state,Values=available" \
     --query "reverse(sort_by(Images, &CreationDate))[:1].ImageId" --output text)
 
-if [ -z "$latest_ami" ]; then
+if [ -z "${latest_ami-}" ]; then
     echo "The Elastio s0 AMI was not found in region $current_region. This usually means the region is not one Elastio currently supports."
     exit 14
 fi
@@ -393,7 +395,7 @@ create_s0_bootstrap
 echo "Launching \"$instance_name\" (instance type $instance_type) with the latest Elastio s0 AMI ($latest_ami)"
 
 aws_subnet_args=""
-[ -n "$subnet_id" ] && aws_subnet_args="--subnet-id $subnet_id"
+[ -n "${subnet_id-}" ] && aws_subnet_args="--subnet-id $subnet_id"
 
 instance_json=$(aws ec2 run-instances \
     --image-id "$latest_ami" \
