@@ -188,7 +188,7 @@ usage()
     echo "                              NOTE: The group existance and the open ports in the group aren't checked."
     echo "                                    The script may not have permissions and assumes that the group is configured properly."
     echo
-    echo "  -n | --subnet-id          : Optional. A subnet ID to use instead of the default subnet associated with the default VPC."
+    echo "  -u | --subnet-id          : Optional. A subnet ID to use instead of the default subnet associated with the default VPC."
     echo "                              Mandatory if you don't have a default VPC. Use the subnet ID associated with the non-default VPC, which you would like to use in this case."
     echo
     echo "  -b | --bucket-name        : s3 bucket name for s0 vault."
@@ -221,7 +221,7 @@ while [ "$1" != "" ]; do
         -s | --ssh-key-name)        shift && ssh_key_name=$1 ;;
         -n | --instance-name)       shift && instance_name=$1 ;;
         -t | --instance-type)       shift && instance_type=$1 ;;
-        -n | --subnet-id)           shift && subnet_id=$1 ;;
+        -u | --subnet-id)           shift && subnet_id=$1 ;;
         -g | --security-group)      shift && security_group=$1 ;;
         -b | --bucket-name)         shift && bucket_name=$1 ;;
         -k | --kms-key-alias)       shift && kms_key_alias="${1#alias/}" ;;
