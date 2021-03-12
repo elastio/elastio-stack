@@ -85,7 +85,11 @@ uninstall_all()
     if which apt-get >/dev/null 2>&1; then
         dpkg -l | grep elastio | awk '{ print $2}' | xargs apt-get remove --purge -y
     else
-        rpm -qa | grep elastio | xargs yum remove -y
+        rpm -qa | grep elastio | grep -v elastio-repo | xargs yum remove -y
+        yum clean all --disablerepo="*" --enablerepo=Elastio
+        yum remove -y elastio-repo
+        # Remove cache (mirror files) in case if no elastio packages remain for sure
+        rpm -qa | grep -q elastio || rm -rf /var/cache/yum/*/*/Elastio/
     fi
 }
 
