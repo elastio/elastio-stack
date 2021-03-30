@@ -11,7 +11,10 @@ set -eu -o pipefail
 export PS4='+ [${BASH_SOURCE[0]##*/}:${LINENO}${FUNCNAME[0]:+:${FUNCNAME[0]}}] '
 
 reds_tar_name='reds.tar.gz'
-reds_tar_url="https://elastio-aws-lambda-binaries.s3.us-east-2.amazonaws.com/prod/${reds_tar_name}"
+
+: "${ELASTIO_REDS_TAR_URL:="https://elastio-aws-lambda-binaries.s3.us-east-2.amazonaws.com/prod/${reds_tar_name}"}"
+: "${ELASTIO_STACK_ENV:="prod"}"
+
 # Pinned version of terraform
 tf_version=0.14.3
 
@@ -103,7 +106,7 @@ EOF
     fi
 
     # Download and untar the artifacts to deploy our Red Stack with terraform
-    ensure download "$reds_tar_url" "$reds_tar_path"
+    ensure download "$ELASTIO_REDS_TAR_URL" "$reds_tar_path"
     ensure tar -C "$untar_path" -zxf "$reds_tar_path"
 
     ensure deploy_reds "$temp_dir" "$untar_path" "$stack_name" "$aws_region"
@@ -132,7 +135,7 @@ deploy_reds() {
     $artifacts_dir/scripts/init-tf-backend-aws.sh \
         --aws-region "$aws_region" \
         --stack-name "$stack_name" \
-        --stack-env "prod" \
+        --stack-env "$ELASTIO_STACK_ENV" \
         --tf-path "$terraform"
 
     log_info 'Deploying the target services via terraform...'
@@ -141,16 +144,16 @@ deploy_reds() {
 
     ensure $terraform init \
         -input=false \
-        -backend-config "bucket=elastio-prod-${stack_name}-terraform-state" \
+        -backend-config "bucket=elastio-$ELASTIO_STACK_ENV-${stack_name}-terraform-state" \
         -backend-config "region=$aws_region" \
-        -backend-config "dynamodb_table=elastio-prod-${stack_name}-terraform-locks" \
+        -backend-config "dynamodb_table=elastio-$ELASTIO_STACK_ENV-${stack_name}-terraform-locks" \
         -backend-config "encrypt=true"
 
     ensure $terraform apply \
         -input=false \
         -var "aws_region=$aws_region" \
         -var "stack_name=$stack_name" \
-        -var "stack_env=prod"
+        -var "stack_env=$ELASTIO_STACK_ENV"
 
     popd > /dev/null
 }
