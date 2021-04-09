@@ -1,7 +1,19 @@
 #!/bin/bash
 
+_readlink() {
+    # Emulate GNU readlink's -f option on say a Mac
+    [[ -z "$1" ]] && echo "_readlink: missing argument" >&2
+    CWD=$(pwd)
+    cd -P $1
+    pwd
+    cd $CWD
+}
+
+# Disable sending aws cli 2 output to less or more 
+export AWS_PAGER=""
+
 me=$(basename $0)
-dir=$(readlink -f $(dirname $0))
+dir=$(_readlink $(dirname $0)))
 elastio_aws_id=537513441174
 default_security_group="elastio-s0-server"
 default_instance_type="m5d.2xlarge"
