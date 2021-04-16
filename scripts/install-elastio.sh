@@ -44,7 +44,14 @@ cent8_fedora_install()
 
 cent_fedora_install()
 {
-    yum localinstall -y $repo_url/rpm/$1/$2/x86_64/Packages/elastio-repo-0.0.2-1.$3$2.noarch.rpm
+    # The elastio-repo package is going to be moved from the x86_64/Packages to the noarch/Packages
+    # This process can take some time and the package location can be different between branches for
+    # some period of time. That's why trying both paths.
+    url=$repo_url/rpm/$1/$2/noarch/Packages/elastio-repo-0.0.2-1.$3$2.noarch.rpm
+    if (($(curl -s -I -L -m 2 "$url" | grep -E "^HTTP" | awk '{ print $2 }' | tail -1) != 200)) ; then
+        url=$repo_url/rpm/$1/$2/x86_64/Packages/elastio-repo-0.0.2-1.$3$2.noarch.rpm
+    fi
+    yum localinstall -y $url
     which dnf >/dev/null 2>&1 &&
         cent8_fedora_install $1 $2 $3 ||
         cent7_amazon_install $1 $2 $3
