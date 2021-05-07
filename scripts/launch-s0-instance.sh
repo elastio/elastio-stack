@@ -9,7 +9,7 @@ _readlink() {
     cd $CWD
 }
 
-# Disable sending aws cli 2 output to less or more 
+# Disable sending aws cli 2 output to less or more
 export AWS_PAGER=""
 
 me=$(basename $0)
@@ -205,7 +205,7 @@ usage()
     echo
     echo "  -b | --bucket-name        : s3 bucket name for s0 vault."
     echo
-    echo "  -k | --kms-key-alias      : KMS key alias for the data encription in the s0 vault."
+    echo "  -k | --kms-key-alias      : KMS key alias for the data encription in the s0 vault. Also accepts a key ID in UUID format."
     echo
     echo "  -p | --instance-profile   : A name of the existing instance provile with access to the s3 bucket and KMS key from 2 parameters above."
     echo "                              See AWS docs for more details how to create one:"
@@ -316,7 +316,10 @@ if [[ "$current_region" != "$bucket_region" ]]; then
 fi
 
 echo "Validating KMS key alias \"$kms_key_alias\"..."
-if ! kms_key_description=$(aws kms describe-key --key-id alias/$kms_key_alias --output json); then
+# Check is it a key ID like a UUID, like this 6dff1da6-da8e-43ac-9127-d39ed3c540d6 or something else, assuming an alias.
+alias_prefix="alias/"
+[[ $kms_key_alias =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]] && alias_prefix=
+if ! kms_key_description=$(aws kms describe-key --key-id $alias_prefix$kms_key_alias --output json); then
     echo "The KMS key alias '$kms_key_alias' isn't found!"
     exit 8
 fi
