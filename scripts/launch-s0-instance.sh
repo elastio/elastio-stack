@@ -56,7 +56,7 @@ write_files:
       StartLimitInterval=5
       StartLimitBurst=10
       TimeoutStopSec=5min
-      ExecStart=/bin/bash -c '/usr/bin/s0 vault serve s3 --bucket $S0_BUCKET --key-id alias/$S0_KMS $BLOCK_SIZE --server-address 0.0.0.0 --db-path $DB_MOUNT 2>&1 | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g" >> /var/log/s0-service.log'
+      ExecStart=/bin/bash -c '/usr/bin/s0 vault serve s3 --bucket $S0_BUCKET --key-id $S0_KMS $BLOCK_SIZE --server-address 0.0.0.0 --db-path $DB_MOUNT 2>&1 | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g" >> /var/log/s0-service.log'
       Restart=always
       RestartSec=5
 
@@ -398,7 +398,7 @@ fi
 
 export INSTANCE_NAME=$instance_name
 export S0_BUCKET=$bucket_name
-export S0_KMS=$kms_key_alias
+export S0_KMS="$alias_prefix$kms_key_alias"
 export BLOCK_SIZE="--$block_size"
 export DB_MOUNT=$db_mount
 export SERVICE=$service
