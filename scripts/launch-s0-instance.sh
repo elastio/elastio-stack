@@ -385,6 +385,14 @@ echo "Validating instance profile \"$instance_profile\"..."
 if ! aws iam get-instance-profile --instance-profile-name $instance_profile >/dev/null ; then
     echo "The instance profile '$instance_profile' isn't found!"
     exit 13
+else
+    existing_role=$(aws iam get-instance-profile --instance-profile-name $instance_profile | grep RoleName | head -1 | tr -d '",' | awk '{print $NF}')
+    existing_policy=$(aws iam list-role-policies --role-name $existing_role --output text | cut -f2)
+    if [ $(aws iam get-role-policy --policy-name $existing_policy --role-name $existing_role --output text | grep s3 | grep $bucket_name | wc -l) -ne 2 ]; then
+        echo "Current instance profile has role $existing_role with the policy $existing_policy which hasn't access to the s3 bucket $bucket_name."
+        echo "Please fix it or create another instance profile using the --create-profile script parameter."
+        exit 15
+    fi
 fi
 
 latest_ami=$(aws ec2 describe-images --owners $elastio_aws_id \
