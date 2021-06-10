@@ -27,6 +27,7 @@ policy_name="s0-permissions"
 db_mount=/mnt/elastio
 unit_file=/etc/systemd/user/s0.service
 service=s0
+instance_market_options="--instance-market-options MarketType=spot,SpotOptions={SpotInstanceType=persistent,InstanceInterruptionBehavior=stop}"
 
 create_s0_bootstrap()
 {
@@ -223,6 +224,8 @@ usage()
     echo "                                This shard is intended for use with backups of file systems, streams, and any other data that isn't organized"
     echo "                                into fixed size blocks."
     echo
+    echo "  -o | --on-demand          : Optional. Create an on-demand instance instead of the default spot instance."
+    echo
     echo "  -h | --help               : Show this usage help."
 }
 
@@ -240,6 +243,7 @@ while [ "$1" != "" ]; do
         -p | --instance-profile)    shift && instance_profile=$1 ;;
         -c | --create-profile)      shift && new_instance_profile=$1 ;;
         -z | --shard)               shift && block_size=$1 ;;
+        -o | --on-demand)           instance_market_options="" ;;
         -h | --help)                usage && exit ;;
         *)                          echo "Wrong arguments!"
                                     usage && exit 15 ;;
@@ -425,6 +429,7 @@ instance_json=$(aws ec2 run-instances \
     --instance-type "$instance_type" \
     --key-name "$ssh_key_name" \
     --iam-instance-profile Name="$instance_profile" \
+    $instance_market_options \
     --ebs-optimized \
     --block-device-mappings "DeviceName=/dev/xvda,Ebs={VolumeSize=30}" \
     --user-data file://$bootstrap \
