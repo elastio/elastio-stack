@@ -224,7 +224,7 @@ usage()
     echo "                                This shard is intended for use with backups of file systems, streams, and any other data that isn't organized"
     echo "                                into fixed size blocks."
     echo
-    echo "  -o | --on-demand          : Optional. Create an on-demand instance instead of the default spot instance."
+    echo "       --on-demand          : Optional. Create an on-demand instance instead of the default spot instance."
     echo
     echo "  -h | --help               : Show this usage help."
 }
