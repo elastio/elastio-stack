@@ -243,7 +243,7 @@ while [ "$1" != "" ]; do
         -p | --instance-profile)    shift && instance_profile=$1 ;;
         -c | --create-profile)      shift && new_instance_profile=$1 ;;
         -z | --shard)               shift && block_size=$1 ;;
-        -o | --on-demand)           instance_market_options="" ;;
+             --on-demand)           instance_market_options="" ;;
         -h | --help)                usage && exit ;;
         *)                          echo "Wrong arguments!"
                                     usage && exit 15 ;;
