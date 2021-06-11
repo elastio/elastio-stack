@@ -27,7 +27,10 @@ policy_name="s0-permissions"
 db_mount=/mnt/elastio
 unit_file=/etc/systemd/user/s0.service
 service=s0
-instance_market_options="--instance-market-options MarketType=spot,SpotOptions={SpotInstanceType=persistent,InstanceInterruptionBehavior=stop}"
+
+# The default SpotInstanceType is 'one-time' with the InstanceInterruptionBehavior 'terminate'.
+# See thread https://github.com/elastio/elastio-stack/pull/33#discussion_r649148466 for details.
+instance_market_options="--instance-market-options MarketType=spot"
 
 create_s0_bootstrap()
 {
