@@ -427,18 +427,35 @@ echo "Launching \"$instance_name\" (instance type $instance_type) with the lates
 aws_subnet_args=""
 [ -n "${subnet_id-}" ] && aws_subnet_args="--subnet-id $subnet_id"
 
-instance_json=$(aws ec2 run-instances \
-    --image-id "$latest_ami" \
-    --instance-type "$instance_type" \
-    --key-name "$ssh_key_name" \
-    --iam-instance-profile Name="$instance_profile" \
-    $instance_market_options \
-    --ebs-optimized \
-    --block-device-mappings "DeviceName=/dev/xvda,Ebs={VolumeSize=30}" \
-    --user-data file://$bootstrap \
-    --security-group-ids "$sg_id" \
-    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$instance_name}]" \
-    --output json $aws_subnet_args)
+err=1
+count=0
+set +e
+while [ $err -ne 0 ] && [ $count -lt 10 ] ; do
+    count=$((count+1))
+    echo "Attempt $count ..."
+    instance_json=$(aws ec2 run-instances \
+        --image-id "$latest_ami" \
+        --instance-type "$instance_type" \
+        --key-name "$ssh_key_name" \
+        --iam-instance-profile Name="$instance_profile" \
+        $instance_market_options \
+        --ebs-optimized \
+        --block-device-mappings "DeviceName=/dev/xvda,Ebs={VolumeSize=30}" \
+        --user-data file://$bootstrap \
+        --security-group-ids "$sg_id" \
+        --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$instance_name}]" \
+        --output json $aws_subnet_args 2>&1)
+    err=$?
+    [ $err -ne 0 ] && echo $instance_json | grep -q -v InsufficientInstanceCapacity && break
+    sleep 4
+done
+
+if [ $err -ne 0 ]; then
+    echo "Failed to launch s0 instance after $count attempts."
+    echo $instance_json
+    exit $err
+fi
+set -e
 
 instance_id=$(echo "$instance_json" | grep InstanceId | tr -d '",' | awk '{print $NF}')
 echo "Launched EC2 instance id $instance_id"
