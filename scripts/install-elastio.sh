@@ -113,8 +113,8 @@ usage()
     echo "  -c | --cli-only       : Install Elastio CLI only, without change tracking driver elastio-snap."
     echo
     echo "  -d | --driver-only    : Install change tracking driver elastio-snap only, without Elastio CLI."
-    echo "                          NOTE: There are no elastio-snap packages for Fedora (kernel 5.8 and newer) as of yet."
-    echo "                                So, temporarily this option does nothing on Fedora."
+    echo "                          NOTE: There are no elastio-snap packages for Fedora (kernel 5.12 and newer) as of yet."
+    echo "                                So, temporarily this option does nothing on Fedora 33 and newer."
     echo
     echo "  -u | --uninstall      : Uninstall all Elastio packages."
     echo
@@ -200,15 +200,15 @@ case ${dist_name} in
     ;;
 
     fedora | fc )
-        if [ ! -z "$driver" ] &&  [ $dist_ver -gt 31 ]; then
-            echo "There are no elastio-snap packages for Fedora 32 and newer (kernel 5.9+) yet. Ignoring driver installation..."
+        if [ ! -z "$driver" ] &&  [ $dist_ver -gt 32 ]; then
+            echo "There are no elastio-snap packages for Fedora 33 and newer (kernel 5.12+) yet. Ignoring driver installation..."
             unset driver
         fi
 
         case ${dist_ver} in
-            31 | 32 | 33 ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
+            31 | 32 | 33 | 34 ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
             * )
-                echo "Fedora versions 31-33 are supported. Current distro version $dist_ver isn't supported."
+                echo "Fedora versions 31-34 are supported. Current distro version $dist_ver isn't supported."
                 exit 1
             ;;
         esac
@@ -217,8 +217,10 @@ case ${dist_name} in
     debian | ubuntu )
         factor=1
         [ "$dist_name" == "ubuntu" ] && factor=2
-        min_ver=$((8*$factor))
-        max_ver=$((10*$factor))
+        min_ver=$((9*$factor))
+        max_ver=$((11*$factor))
+        # Let's do not support Ubuntu 22 yet ))
+        [ $max_ver -gt 20 ] && max_ver=20
         if [ $dist_ver -ge $min_ver ] && [ $dist_ver -le $max_ver ]; then
             deb_ubu_install $(($dist_ver/$factor))
         else
