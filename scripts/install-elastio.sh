@@ -44,6 +44,10 @@ cent8_fedora_install()
 
 cent_fedora_install()
 {
+    if [ "$1" = "CentOS" ] && grep "Red Hat" -q /etc/redhat-release 2>/dev/null ; then
+        yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$2.noarch.rpm
+    fi
+
     # The elastio-repo package is going to be moved from the x86_64/Packages to the noarch/Packages
     # This process can take some time and the package location can be different between branches for
     # some period of time. That's why trying both paths.
