@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+set -eu -o pipefail
+# set -x
+export PS4='+ [${BASH_SOURCE[0]##*/}:${LINENO}${FUNCNAME[0]:+:${FUNCNAME[0]}}] '
+
+prog="${0##*/}"
+
+usage() {
+    cat <<EOF
+Usage: $prog [-y | --upload] [--] <volume>
+       $prog upload [--] <file>
+
+Scan a file system volume for ransomware and/or upload the scan results to S3.
+
+Options:
+  -h, --help      Show this help and exit
+  -y, --upload    Answer "yes" to the upload confirmation dialog
+
+Subcommands:
+  upload      Upload a file with scan results to Elastio.
+              *CAUTION*: The file will be uploaded to a S3 bucket owned by Elastio.
+              Elastio developers will be able to read it.
+
+Positional arguments:
+  <file>      Path to a locally saved file with scan results
+  <volume>    Path to a block device or mount point
+EOF
+}
+
+opt_upload=false
+opt_arg=
+DOCKER=
+
+optparse_scan() {
+    local temp
+    temp=$(getopt -o h,y --long help,upload --name "$prog" -- "$@")
+    eval set -- "$temp"
+
+    while true; do
+        case "$1" in
+            -h|--help)
+                usage
+                exit
+                ;;
+            -y|--upload)
+                opt_upload=true
+                ;;
+            --)
+                shift
+                break
+                ;;
+            *)
+                die "[$prog:$LINENO] BUG"  # unreachable
+                ;;
+        esac
+        shift
+    done
+    (( $# == 1 )) ||
+        die "Wrong number of arguments.  Type '$prog --help' for usage."
+    opt_arg="$1"
+}
+
+optparse_upload() {
+    local temp
+    temp=$(getopt -o h --long help --name "$prog" -- "$@")
+    eval set -- "$temp"
+
+    while true; do
+        case "$1" in
+            -h|--help)
+                usage
+                exit
+                ;;
+            --)
+                shift
+                break
+                ;;
+            *)
+                die "[$prog:$LINENO] BUG"  # unreachable
+                ;;
+        esac
+        shift
+    done
+    (( $# == 1 )) || die 'Which file to upload?'
+    opt_arg="$1"
+}
+
+die() {
+    echo "$@" >&2
+    exit 1
+}
+
+# https://github.com/git/git/blob/9d530dc0024503ab4218fe6c4395b8a0aa245478/color.h#L25
+GIT_COLOR_RESET='\033[m'
+GIT_COLOR_BOLD_RED='\033[1;31m'
+GIT_COLOR_BOLD_GREEN='\033[1;32m'
+GIT_COLOR_BOLD_YELLOW='\033[1;33m'
+GIT_COLOR_BOLD_BLUE='\033[1;34m'
+
+# https://github.com/git/git/blob/9d530dc0024503ab4218fe6c4395b8a0aa245478/color.c#L420
+color_print() {
+    (( $# == 2 || $# == 3)) || die "[$prog:$LINENO] BUG: Invalid usage"
+    local color="$1"
+    local text="$2"
+    local trail="${3-\n}"
+
+    printf "${color}%s${GIT_COLOR_RESET}${trail}" "$text"
+}
+
+print_info() {
+    color_print "$GIT_COLOR_BOLD_GREEN" "$@" >&2
+}
+
+print_warning() {
+    color_print "$GIT_COLOR_BOLD_YELLOW" "$@" >&2
+}
+
+print_error() {
+    color_print "$GIT_COLOR_BOLD_RED" "$@" >&2
+}
+
+# Pipe viewer
+_pv() {
+    if [[ -n $(type -p pv) ]]; then
+        pv --delay-start 2 --progress --timer --rate --bytes "$@"
+    else
+        cat
+    fi
+}
+
+check_docker() {
+    # Make sure Docker is installed and the daemon is running.
+    if [[ -n $(type -p docker) ]]; then
+        DOCKER='docker'
+    else
+        DOCKER='sudo docker'
+    fi
+    $DOCKER --version >& /dev/null || {
+        print_error 'Docker is not installed'
+        print_warning 'See https://docs.docker.com/engine/install/'
+        exit 1
+    }
+    $DOCKER ps >/dev/null
+}
+
+# Login to Amazon ECR (the container image registry).
+#
+# Whenever possible docker pulls should be coming from the "authenticated" pool
+# and not the "anonymous" pool, since the free bandwidth cap is much higher for
+# the authenticated.
+docker_login() {
+    local registry=$1
+
+    aws ecr-public get-login-password --region us-east-1 2>/dev/null |
+        $DOCKER login --username AWS --password-stdin $registry &>/dev/null ||
+        print_warning 'AWS authentication is not available. Proceeding anonymously.'
+}
+
+cmd_scan() {
+    (( $# == 1 )) || die "[$prog:$LINENO] BUG: Invalid usage"
+    local volume="$1"
+
+    check_docker
+
+    # Note that public ECRs always get the login from us-east-1.
+    local registry='public.ecr.aws/elastio-dev/'
+    docker_login $registry
+
+    # The output file.  It will be removed if `docker run` fails.
+    local out
+    out=$(mktemp --tmpdir 'iscan-XXXXXXXXXX.tar.gz')
+    trap "rm $out" 0
+
+    # Scan the volume
+    local docker_run="$DOCKER run --rm --pull always"
+    # XXX TODO: Put metadata - iscan version, timestamp, volume - into the tarball.
+    if mountpoint --quiet "$volume"; then
+        $docker_run \
+            --mount readonly,type=bind,source="$volume",destination=/vol \
+            ${registry}iscan:latest /vol
+    else
+        $docker_run --privileged ${registry}iscan:latest "$volume"
+    fi |
+        _pv --name 'Scanning' |
+        gzip > $out
+
+    # The output file has been generated successfully, and we want to keep it.
+    # Unset the trap that would remove the file.
+    trap - 0
+
+    print_info "Scanning finished, results saved to $out"
+
+    while ! $opt_upload; do
+        color_print "$GIT_COLOR_BOLD_BLUE" 'Upload the file to Elastio [y,n]? ' ''
+        read -r
+        case "${REPLY,,}" in
+            y|yes)
+                opt_upload=true
+                ;;
+            n|no)
+                return
+                ;;
+        esac
+    done
+
+    if $opt_upload; then
+        cmd_upload $out
+    fi
+
+    # XXX TODO: Ask the user if they want to keep the file.
+}
+
+cmd_upload() {
+    (( $# == 1 )) || die "[$prog:$LINENO] BUG: Invalid usage"
+    local file="$1"
+
+    # Check if AWS CLI is installed.
+    if ! aws --version >/dev/null; then
+        print_error 'Cannot upload the file'
+        print_warning 'Install AWS CLI tool. See'
+        print_warning 'https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html'
+        exit 1
+    fi
+
+    # XXX TODO: Check if this is indeed a file with iscan results.
+
+    # XXX TODO: Use `--metadata` option.
+    local bucket='elastio-rw-reports-test-bucket'
+    # CAUTION: This S3 bucket is world-writable.
+    aws s3 cp \
+        --acl bucket-owner-full-control \
+        --quiet \
+        "$file" s3://$bucket/
+    print_info "Results uploaded to s3://$bucket/${file##*/}"
+}
+
+main() {
+    local cmd='scan'
+    if [[ "${1:-}" == 'upload' ]]; then
+        cmd='upload'
+        shift
+    fi
+    optparse_$cmd "$@"
+    cmd_$cmd "$opt_arg"
+}
+
+main "$@"
