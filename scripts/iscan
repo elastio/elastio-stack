@@ -124,6 +124,7 @@ _pv() {
     if [[ -n $(type -p pv) ]]; then
         pv --delay-start 2 --progress --timer --rate --bytes "$@"
     else
+        print_info 'Scanning...' ''
         cat
     fi
 }
@@ -166,32 +167,37 @@ cmd_scan() {
     local registry='public.ecr.aws/elastio-dev/'
     docker_login $registry
 
+    local image=${registry}iscan:latest
+    # Ensure we use the most recent image.
+    docker pull $image
+
     # The output file.  It will be removed if `docker run` fails.
     local out
     out=$(mktemp --tmpdir 'iscan-XXXXXXXXXX.tar.gz')
     trap "rm $out" 0
 
     # Scan the volume
-    local docker_run="$DOCKER run --rm --pull always"
     # XXX TODO: Put metadata - iscan version, timestamp, volume - into the tarball.
     if mountpoint --quiet "$volume"; then
-        $docker_run \
+        $DOCKER run --rm \
             --mount readonly,type=bind,source="$volume",destination=/vol \
-            ${registry}iscan:latest /vol
+            $image /vol
     else
-        $docker_run --privileged ${registry}iscan:latest "$volume"
+        $DOCKER run --rm --privileged $image "$volume"
     fi |
         _pv --name 'Scanning' |
         gzip > $out
+
+    print_info ' done'
 
     # The output file has been generated successfully, and we want to keep it.
     # Unset the trap that would remove the file.
     trap - 0
 
-    print_info "Scanning finished, results saved to $out"
+    print_info "Results saved to $out"
 
     while ! $opt_upload; do
-        color_print "$GIT_COLOR_BOLD_BLUE" 'Upload the file to Elastio [y,n]? ' ''
+        color_print "$GIT_COLOR_BOLD_BLUE" 'Upload this file to Elastio [y,n]? ' ''
         read -r
         case "${REPLY,,}" in
             y|yes)
