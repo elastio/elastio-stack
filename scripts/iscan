@@ -3,21 +3,35 @@ set -eu -o pipefail
 # set -x
 export PS4='+ [${BASH_SOURCE[0]##*/}:${LINENO}${FUNCNAME[0]:+:${FUNCNAME[0]}}] '
 
+# The registry where the `iscan` image can be found.
+#
+# To use local image, set this to an empty string when launching the script,
+# e.g.
+#     REGISTRY= ./iscan /mount/point
+REGISTRY=${REGISTRY-public.ecr.aws/elastio-dev/}
+
 prog="${0##*/}"
 
 usage() {
     cat <<EOF
-Usage: $prog [-y | --upload] [--] <volume>
+Usage: $prog [-N | --name=<stem>] [-y | --upload] [--] <volume>
        $prog upload [--] <file>
 
-Scan a file system volume for ransomware and/or upload the scan results to S3.
+Scan file system volume for ransomware and/or upload the archive with scan results
+to S3.
 
 Options:
   -h, --help      Show this help and exit
+
+  -N, --name <stem>
+      The "stem" of output files, i.e., the filename stripped of directory and extension.
+      Default is "iscan-\$(basename \$volume)-\$(date --utc +%y%m%d-%H%M%S)",
+      which gets evaluated to something like "iscan-nvme1n1p1-211031-125142"
+
   -y, --upload    Answer "yes" to the upload confirmation dialog
 
 Subcommands:
-  upload      Upload a file with scan results to Elastio.
+  upload      Send the file with scan results to Elastio.
               *CAUTION*: The file will be uploaded to a S3 bucket owned by Elastio.
               Elastio developers will be able to read it.
 
@@ -27,13 +41,15 @@ Positional arguments:
 EOF
 }
 
+opt_name=
 opt_upload=false
 opt_arg=
+
 DOCKER=
 
 optparse_scan() {
     local temp
-    temp=$(getopt -o h,y --long help,upload --name "$prog" -- "$@")
+    temp=$(getopt -o h,N:,y --long help,name:,upload --name "$prog" -- "$@")
     eval set -- "$temp"
 
     while true; do
@@ -41,6 +57,10 @@ optparse_scan() {
             -h|--help)
                 usage
                 exit
+                ;;
+            -N|--name)
+                opt_name="$2"
+                shift
                 ;;
             -y|--upload)
                 opt_upload=true
@@ -142,6 +162,7 @@ check_docker() {
 docker_login() {
     local registry=$1
 
+    # Note that public ECRs always get the login from us-east-1.
     aws ecr-public get-login-password --region us-east-1 2>/dev/null |
         $DOCKER login --username AWS --password-stdin $registry &>/dev/null ||
         print_warning 'AWS authentication is not available. Proceeding anonymously.'
@@ -151,29 +172,33 @@ cmd_scan() {
     (( $# == 1 )) || die "[$prog:$LINENO] BUG: Invalid usage"
     local volume="$1"
 
+    local name="$opt_name"
+    if [[ -z $name ]]; then
+        name="iscan-$(basename $volume)-$(date --utc +%y%m%d-%H%M%S)"
+    fi
+
+    local image=${REGISTRY}iscan:latest
     check_docker
-
-    # Note that public ECRs always get the login from us-east-1.
-    local registry='public.ecr.aws/elastio-dev/'
-    docker_login $registry
-
-    local image=${registry}iscan:latest
-    # Ensure we use the most recent image.
-    docker pull $image
+    if [[ -n $REGISTRY ]]; then
+        docker_login $REGISTRY
+        # Ensure we use the most recent image.
+        docker pull $image
+    fi
 
     # The output file.  It will be removed if `docker run` fails.
-    local out
-    out=$(mktemp --tmpdir 'iscan-XXXXXXXXXX.tar.gz')
-    trap "rm $out" 0
+    local out="${TMPDIR:-/tmp}/$name.tar.gz"
+    # XXX TODO: If $out exists, ask the user if it's OK to overwrite it.
+    trap "rm -f $out" 0
 
     # Scan the volume
     # XXX TODO: Put metadata - iscan version, timestamp, volume - into the tarball.
     if mountpoint --quiet "$volume"; then
         $DOCKER run --rm \
             --mount readonly,type=bind,source="$volume",destination=/vol \
+            --env STEM="$name" \
             $image /vol
     else
-        $DOCKER run --rm --privileged $image "$volume"
+        $DOCKER run --rm --privileged --env STEM="$name" $image "$volume"
     fi |
         gzip > $out
 
