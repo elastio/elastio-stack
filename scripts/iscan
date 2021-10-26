@@ -119,16 +119,6 @@ print_error() {
     color_print "$GIT_COLOR_BOLD_RED" "$@" >&2
 }
 
-# Pipe viewer
-_pv() {
-    if [[ -n $(type -p pv) ]]; then
-        pv --delay-start 2 --progress --timer --rate --bytes "$@"
-    else
-        print_info 'Scanning...' ''
-        cat
-    fi
-}
-
 check_docker() {
     # Make sure Docker is installed and the daemon is running.
     if [[ -n $(type -p docker) ]]; then
@@ -185,7 +175,6 @@ cmd_scan() {
     else
         $DOCKER run --rm --privileged $image "$volume"
     fi |
-        _pv --name 'Scanning' |
         gzip > $out
 
     print_info ' done'
@@ -221,7 +210,7 @@ cmd_upload() {
     local file="$1"
 
     # Check if AWS CLI is installed.
-    if ! aws --version >/dev/null; then
+    if [[ -z $(type -p aws) ]] || ! aws --version >/dev/null; then
         print_error 'Cannot upload the file'
         print_warning 'Install AWS CLI tool. See'
         print_warning 'https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html'
