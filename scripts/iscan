@@ -3,11 +3,14 @@ set -eu -o pipefail
 # set -x
 export PS4='+ [${BASH_SOURCE[0]##*/}:${LINENO}${FUNCNAME[0]:+:${FUNCNAME[0]}}] '
 
-# The registry where the `iscan` image can be found.
+# The registry where the `iscan` Docker image can be found.
 #
 # To use local image, set this to an empty string when launching the script,
 # e.g.
 #     REGISTRY= ./iscan /mount/point
+#
+# To pull the image from private Amazon ECR:
+#     REGISTRY="${aws_account_id}.dkr.ecr.${region}.amazonaws.com/" ./iscan /mount/point
 REGISTRY=${REGISTRY-public.ecr.aws/elastio-dev/}
 
 prog="${0##*/}"
@@ -25,8 +28,8 @@ Options:
 
   -N, --name <stem>
       The "stem" of output files, i.e., the filename stripped of directory and extension.
-      Default is "iscan-\$(basename \$volume)-\$(date --utc +%y%m%d-%H%M%S)",
-      which gets evaluated to something like "iscan-nvme1n1p1-211031-125142"
+      Default is "iscan-\$HOSTNAME-\$(basename \$volume)-\$(date --utc +%y%m%d-%H%M%S)",
+      which gets evaluated to something like "iscan-ip-172-31-44-103-nvme1n1p1-211031-125142"
 
   -y, --upload    Answer "yes" to the upload confirmation dialog
 
@@ -161,9 +164,16 @@ check_docker() {
 # the authenticated.
 docker_login() {
     local registry=$1
+    [[ -n $registry ]] || die "BUG: ${FUNCNAME[0]}: Invalid usage"
 
-    # Note that public ECRs always get the login from us-east-1.
-    aws ecr-public get-login-password --region us-east-1 2>/dev/null |
+    if [[ $registry =~ ^public\.ecr\.aws ]]; then
+        # Public ECR is always in 'us-east-1'.
+        aws --region us-east-1 ecr-public get-login-password &>/dev/null
+    else
+        # It looks like we are dealing with a private Amazon ECR;
+        # see https://docs.aws.amazon.com/AmazonECR/latest/userguide/Registries.html#registry_concepts
+        aws ecr get-login-password &>/dev/null
+    fi |
         $DOCKER login --username AWS --password-stdin $registry &>/dev/null ||
         print_warning 'AWS authentication is not available. Proceeding anonymously.'
 }
@@ -174,15 +184,18 @@ cmd_scan() {
 
     local name="$opt_name"
     if [[ -z $name ]]; then
-        name="iscan-$(basename $volume)-$(date --utc +%y%m%d-%H%M%S)"
+        name="iscan-$HOSTNAME-$(basename $volume)-$(date --utc +%y%m%d-%H%M%S)"
     fi
+
+    REGISTRY=${REGISTRY%/}            # strip trailing slash, if any
+    REGISTRY=${REGISTRY:+$REGISTRY/}  # if non-empty, add a trailing slash
 
     local image=${REGISTRY}iscan:latest
     check_docker
     if [[ -n $REGISTRY ]]; then
         docker_login $REGISTRY
         # Ensure we use the most recent image.
-        docker pull $image
+        $DOCKER pull $image
     fi
 
     # The output file.  It will be removed if `docker run` fails.
