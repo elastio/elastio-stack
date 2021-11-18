@@ -217,16 +217,26 @@ cmd_scan() {
     # XXX TODO: If $out exists, ask the user if it's OK to overwrite it.
     trap "rm -f $out" 0
 
+    # NOTE: `iscan` Docker image doesn't require BD_* variables to be set.
+    # We provide the opportunity to set them, but leave it intentionally undocumented
+    # (i.e., BD_* variables are not mentioned in the `--help` output).
+    local env_bitdefender=
+    env_bitdefender+=" ${BD_LICENSE:+--env BD_LICENSE=$BD_LICENSE}"
+    env_bitdefender+=" ${BD_UPDATES_SERVER:+--env BD_UPDATES_SERVER=$BD_UPDATES_SERVER}"
+
     # Scan the volume
+    #
     # XXX TODO: Put metadata - iscan version, timestamp, volume - into the tarball.
     if mountpoint -q "$volume"; then
         $DOCKER run --rm \
             --mount readonly,type=bind,source="$volume",destination=/vol \
             --env STEM="$name" \
+            $env_bitdefender \
             $image /vol
     else
         $DOCKER run --rm --privileged \
             --env STEM="$name" \
+            $env_bitdefender \
             $image "$volume"
     fi |
         gzip > $out
