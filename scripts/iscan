@@ -11,7 +11,11 @@ export PS4='+ [${BASH_SOURCE[0]##*/}:${LINENO}${FUNCNAME[0]:+:${FUNCNAME[0]}}] '
 #
 # To pull the image from private Amazon ECR:
 #     REGISTRY="${aws_account_id}.dkr.ecr.${region}.amazonaws.com/" ./iscan /mount/point
+#
 REGISTRY=${REGISTRY-public.ecr.aws/elastio-dev/}
+
+DEFAULT_S3_BUCKET='elastio-rw-reports-test-bucket'
+S3_BUCKET=${S3_BUCKET-$DEFAULT_S3_BUCKET}
 
 prog="${0##*/}"
 
@@ -34,13 +38,15 @@ Options:
   -y, --upload    Answer "yes" to the upload confirmation dialog
 
 Subcommands:
-  upload      Send the file with scan results to Elastio.
-              *CAUTION*: The file will be uploaded to a S3 bucket owned by Elastio.
-              Elastio developers will be able to read it.
+  upload      Send the file with scan results to the S3 bucket.  See S3_BUCKET below.
 
 Positional arguments:
   <file>      Path to a locally saved file with scan results
   <volume>    Path to a block device or mount point
+
+Environment variables:
+  S3_BUCKET   S3 bucket to upload scan results to (default: '$DEFAULT_S3_BUCKET').
+              Setting S3_BUCKET to an empty string disables S3 upload.
 EOF
 }
 
@@ -78,9 +84,14 @@ optparse_scan() {
         esac
         shift
     done
+
     (( $# == 1 )) ||
         die "Wrong number of arguments.  Type '$prog --help' for usage."
     opt_arg="$1"
+
+    if $opt_upload && [[ -z $S3_BUCKET ]]; then
+        die "'--upload' conflicts with S3_BUCKET set to an empty string"
+    fi
 }
 
 optparse_upload() {
@@ -104,6 +115,9 @@ optparse_upload() {
         esac
         shift
     done
+
+    [[ -n $S3_BUCKET ]] || die 'Cannot upload with S3_BUCKET set to an empty string'
+
     (( $# == 1 )) || die 'Which file to upload?'
     opt_arg="$1"
 }
@@ -205,26 +219,32 @@ cmd_scan() {
 
     # Scan the volume
     # XXX TODO: Put metadata - iscan version, timestamp, volume - into the tarball.
-    if mountpoint --quiet "$volume"; then
+    if mountpoint -q "$volume"; then
         $DOCKER run --rm \
             --mount readonly,type=bind,source="$volume",destination=/vol \
             --env STEM="$name" \
             $image /vol
     else
-        $DOCKER run --rm --privileged --env STEM="$name" $image "$volume"
+        $DOCKER run --rm --privileged \
+            --env STEM="$name" \
+            $image "$volume"
     fi |
         gzip > $out
-
     print_info ' done'
 
     # The output file has been generated successfully, and we want to keep it.
     # Unset the trap that would remove the file.
     trap - 0
-
     print_info "Results saved to $out"
 
+    if [[ -z $S3_BUCKET ]]; then
+        # S3_BUCKET is set to an empty string ==> don't upload anything.
+        return
+    fi
+
     while ! $opt_upload; do
-        color_print "$GIT_COLOR_BOLD_BLUE" 'Upload this file to Elastio [y,n]? ' ''
+        color_print "$GIT_COLOR_BOLD_BLUE" \
+            "Upload this file to s3://$S3_BUCKET/ [y,n]? " ''
         read -r
         case "${REPLY,,}" in
             y|yes)
@@ -239,13 +259,13 @@ cmd_scan() {
     if $opt_upload; then
         cmd_upload $out
     fi
-
-    # XXX TODO: Ask the user if they want to keep the file.
 }
 
 cmd_upload() {
     (( $# == 1 )) || die "[$prog:$LINENO] BUG: Invalid usage"
     local file="$1"
+
+    [[ -n $S3_BUCKET ]] || die "[$prog:$LINENO] BUG"
 
     # Check if AWS CLI is installed.
     if [[ -z $(type -p aws) ]] || ! aws --version >/dev/null; then
@@ -257,14 +277,15 @@ cmd_upload() {
 
     # XXX TODO: Check if this is indeed a file with iscan results.
 
-    # XXX TODO: Use `--metadata` option.
-    local bucket='elastio-rw-reports-test-bucket'
-    # CAUTION: This S3 bucket is world-writable.
-    aws s3 cp \
-        --acl bucket-owner-full-control \
-        --quiet \
-        "$file" s3://$bucket/
-    print_info "Results uploaded to s3://$bucket/${file##*/}"
+    if [[ $S3_BUCKET == $DEFAULT_S3_BUCKET ]]; then
+        # $DEFAULT_S3_BUCKET is world-writable.  Let the bucket owner (Elastio)
+        # have full control over the object.
+        # See https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl
+        local opt_acl='--acl bucket-owner-full-control'
+    fi
+    # XXX TODO: Use `--metadata` option of `aws s3 cp` command.
+    aws s3 cp ${opt_acl:-} --quiet "$file" s3://$S3_BUCKET/
+    print_info "Results uploaded to s3://$S3_BUCKET/${file##*/}"
 }
 
 main() {
