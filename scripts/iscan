@@ -7,10 +7,10 @@ export PS4='+ [${BASH_SOURCE[0]##*/}:${LINENO}${FUNCNAME[0]:+:${FUNCNAME[0]}}] '
 #
 # To use local image, set this to an empty string when launching the script,
 # e.g.
-#     REGISTRY= ./iscan /mount/point
+#     REGISTRY= ./iscan $volume
 #
 # To pull the image from private Amazon ECR:
-#     REGISTRY="${aws_account_id}.dkr.ecr.${region}.amazonaws.com/" ./iscan /mount/point
+#     REGISTRY="${aws_account_id}.dkr.ecr.${region}.amazonaws.com/" ./iscan $volume
 #
 REGISTRY=${REGISTRY-public.ecr.aws/elastio-dev/}
 
@@ -21,28 +21,27 @@ prog="${0##*/}"
 
 usage() {
     cat <<EOF
-Usage: $prog [-N | --name=<stem>] [-y | --upload] [--] <volume>
+Usage: $prog [--for (malware|ransomware|both)] [-N | --name=<stem>] [-y | --upload] [--] <volume>
        $prog upload [--] <file>
 
 Scan file system volume for ransomware and/or upload the archive with scan results
 to S3.
 
 Options:
-  -h, --help      Show this help and exit
-
+  -h, --help         Show this help and exit
+      --for <what>   Type of scan to perform ("malware"|"ransomware"|"both") (default "both")
   -N, --name <stem>
       The "stem" of output files, i.e., the filename stripped of directory and extension.
       Default is "iscan-\$HOSTNAME-\$(basename \$volume)-\$(date --utc +%y%m%d-%H%M%S)",
       which gets evaluated to something like "iscan-ip-172-31-44-103-nvme1n1p1-211031-125142"
-
-  -y, --upload    Answer "yes" to the upload confirmation dialog
+  -y, --upload       Answer "yes" to the upload confirmation dialog
 
 Subcommands:
   upload      Send the file with scan results to the S3 bucket.  See S3_BUCKET below.
 
 Positional arguments:
   <file>      Path to a locally saved file with scan results
-  <volume>    Path to a block device or mount point
+  <volume>    Path to a directory or block device to scan
 
 Environment variables:
   S3_BUCKET   S3 bucket to upload scan results to (default: '$DEFAULT_S3_BUCKET').
@@ -51,6 +50,7 @@ EOF
 }
 
 opt_name=
+opt_for='both'
 opt_upload=false
 opt_arg=
 
@@ -58,7 +58,7 @@ DOCKER=
 
 optparse_scan() {
     local temp
-    temp=$(getopt -o h,N:,y --long help,name:,upload --name "$prog" -- "$@")
+    temp=$(getopt -o h,N:,y --long help,for:,name:,upload --name "$prog" -- "$@")
     eval set -- "$temp"
 
     while true; do
@@ -66,6 +66,17 @@ optparse_scan() {
             -h|--help)
                 usage
                 exit
+                ;;
+            --for)
+                case "$2" in
+                    malware|ransomware|both)
+                        opt_for="$2"
+                        ;;
+                    *)
+                        die 'Invalid --for argument'
+                        ;;
+                esac
+                shift
                 ;;
             -N|--name)
                 opt_name="$2"
@@ -227,17 +238,19 @@ cmd_scan() {
     # Scan the volume
     #
     # XXX TODO: Put metadata - iscan version, timestamp, volume - into the tarball.
-    if mountpoint -q "$volume"; then
+    if [[ -d "$volume" ]]; then
         $DOCKER run --rm \
             --mount readonly,type=bind,source="$volume",destination=/vol \
             --env STEM="$name" \
             $env_bitdefender \
-            $image /vol
-    else
+            $image --for $opt_for /vol
+    elif [[ -b "$volume" ]]; then
         $DOCKER run --rm --privileged \
             --env STEM="$name" \
             $env_bitdefender \
-            $image "$volume"
+            $image --for $opt_for "$volume"
+    else
+        die "$volume is neither a directory, nor a block device"
     fi |
         gzip > $out
     print_info ' done'
