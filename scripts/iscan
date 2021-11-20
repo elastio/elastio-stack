@@ -209,7 +209,21 @@ cmd_scan() {
 
     local name="$opt_name"
     if [[ -z $name ]]; then
-        name="iscan-$HOSTNAME-$(basename $volume)-$(date --utc +%y%m%d-%H%M%S)"
+        # A tar archive with colon in its name is not easy to unpack --
+        # GNU tar needs a special flag for that.
+        #
+        #   $ tar -tf 'iscan-ip-172-31-3-187-D:\-211119-203917.tar'
+        #   tar: Cannot connect to iscan-ip-172-31-3-187-D: resolve failed
+        #
+        #   $ tar --force-local -tf 'iscan-ip-172-31-3-187-D:\-211119-203917.tar.gz'
+        #   iscan-ip-172-31-3-187-D:\\-211119-203917_malware.json
+        #   iscan-ip-172-31-3-187-D:\\-211119-203917_ransomware.html
+        #   iscan-ip-172-31-3-187-D:\\-211119-203917_ransomware.json
+        #
+        # The purpose of the `tr`-ickery below is to remove colons, backslashes,
+        # and other nonsence symbols from Windows paths.
+        name=$(basename "$volume" | tr -dc '[:alnum:]')
+        name="iscan-$HOSTNAME-$name-$(date --utc +%y%m%d-%H%M%S)"
     fi
 
     REGISTRY=${REGISTRY%/}            # strip trailing slash, if any
