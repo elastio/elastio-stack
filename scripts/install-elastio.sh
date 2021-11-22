@@ -94,13 +94,36 @@ deb_ubu_install()
 uninstall_all()
 {
     if which apt-get >/dev/null 2>&1; then
-        dpkg -l | grep elastio | awk '{ print $2}' | xargs apt-get remove --purge -y
+        snap="elastio-snap-dkms libelastio-snap1"
+        query_cmd="dpkg -l"
+        uninst_cmd="apt-get remove --purge -y"
+    elif which yum >/dev/null 2>&1; then
+        snap="dkms-elastio-snap libelastio-snap"
+        query_cmd="rpm -q"
+        uninst_cmd="yum remove -y"
     else
-        rpm -qa | grep elastio | grep -v elastio-repo | xargs yum remove -y
-        yum clean all --disablerepo="*" --enablerepo=Elastio
-        yum remove -y elastio-repo
+        echo "Unknown package manager."
+    fi
+
+    packages="elastio elastio-repo $snap elastio-snap-utils elastio-s0 elastio-infra"
+    rm_packages=
+    for package in ${packages[@]}; do
+        $query_cmd $package >/dev/null 2>&1 && rm_packages="$rm_packages $package"
+    done
+
+    if [ -n "$rm_packages" ]; then
+        echo "Uninstalling packages:$rm_packages!"
+        echo
+        $uninst_cmd $rm_packages
+        ret=$?
         # Remove cache (mirror files) in case if no elastio packages remain for sure
-        rpm -qa | grep -q elastio || rm -rf /var/cache/yum/*/*/Elastio/
+        [ $ret -eq 0 ] && which yum >/dev/null 2>&1 && rm -rf /var/cache/yum/*/*/Elastio/
+        echo
+        [ $ret -eq 0 ] &&
+            echo "All elastio packags has been uninstalled!" ||
+            echo "Failed to uninstall some Elastio packages."
+    else
+        echo "No Elastio packages were found."
     fi
 }
 
@@ -153,8 +176,6 @@ repo_url=https://repo.assur.io/$branch/linux
 
 if [ ! -z "$uninstall" ]; then
     uninstall_all
-    echo
-    echo "All elastio packags has been uninstalled!"
     exit
 fi
 
