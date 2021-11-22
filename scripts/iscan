@@ -41,7 +41,7 @@ Subcommands:
 
 Positional arguments:
   <file>      Path to a locally saved file with scan results
-  <volume>    Path to a directory or block device to scan
+  <volume>    Path to a directory, path to a block device, or ID of Elastio recovery point
 
 Environment variables:
   S3_BUCKET   S3 bucket to upload scan results to (default: '$DEFAULT_S3_BUCKET').
@@ -263,8 +263,13 @@ cmd_scan() {
             --env STEM="$name" \
             $env_bitdefender \
             $image --for $opt_for "$volume"
+    elif [[ "$volume" =~ ^r-[a-z0-9]{24}$ ]]; then
+        $DOCKER run --rm \
+            --env STEM="$name" \
+            $env_bitdefender \
+            $image --for $opt_for "$volume"
     else
-        die "$volume is neither a directory, nor a block device"
+        die "$volume is neither a directory, nor a block device, nor a recovery point ID"
     fi |
         gzip > $out
     print_info ' done'
