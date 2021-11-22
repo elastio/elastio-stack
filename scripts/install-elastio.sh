@@ -231,9 +231,9 @@ case ${dist_name} in
         fi
 
         case ${dist_ver} in
-            31 | 32 | 33 | 34 ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
+            31 | 34 | 35 ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
             * )
-                echo "Fedora versions 31-34 are supported. Current distro version $dist_ver isn't supported."
+                echo "Fedora versions 31 and 34, 35 are supported. Current distro version $dist_ver isn't supported."
                 exit 1
             ;;
         esac
