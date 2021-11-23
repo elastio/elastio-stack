@@ -264,7 +264,13 @@ cmd_scan() {
             $env_bitdefender \
             $image --for $opt_for "$volume"
     elif [[ "$volume" =~ ^r-[a-z0-9]{24}$ ]]; then
-        $DOCKER run --rm \
+        # - AWS credentials are needed to run `elastio mount` from within docker.
+        # - /lib/modules are required to `insmod nbd`.
+        # - And /dev gives the container access to NBD device.
+        $DOCKER run --rm --privileged \
+            -v ~/.aws:/root/.aws:ro \
+            -v /lib/modules:/lib/modules:ro \
+            -v /dev:/dev \
             --env STEM="$name" \
             $env_bitdefender \
             $image --for $opt_for "$volume"
