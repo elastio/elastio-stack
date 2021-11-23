@@ -268,7 +268,6 @@ cmd_scan() {
             -v ~/.aws:/root/.aws:ro \
             -v /lib/modules:/lib/modules:ro \
             -v /dev:/dev \
-            --cap-add=ALL \
             --env STEM="$name" \
             $env_bitdefender \
             $image --for $opt_for "$volume"
