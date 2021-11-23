@@ -264,7 +264,11 @@ cmd_scan() {
             $env_bitdefender \
             $image --for $opt_for "$volume"
     elif [[ "$volume" =~ ^r-[a-z0-9]{24}$ ]]; then
-        $DOCKER run --rm \
+        $DOCKER run --rm --privileged \
+            -v ~/.aws:/root/.aws:ro \
+            -v /lib/modules:/lib/modules:ro \
+            -v /dev:/dev \
+            --cap-add=ALL \
             --env STEM="$name" \
             $env_bitdefender \
             $image --for $opt_for "$volume"
