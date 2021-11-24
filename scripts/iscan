@@ -242,15 +242,6 @@ cmd_scan() {
     # XXX TODO: If $out exists, ask the user if it's OK to overwrite it.
     trap "rm -f $out" 0
 
-    # We provide the opportunity to set ISCAN_EXTRA_PARAMS variable, but leave it
-    # intentionally undocumented (i.e., not mentioned in the `--help` output).
-
-    if [[ -z ${ISCAN_EXTRA_PARAMS+x} ]]; then
-      extra_params=()
-    else
-      IFS=' ' read -r -a extra_params <<< "$ISCAN_EXTRA_PARAMS"
-    fi
-
     # Scan the volume
     #
     # XXX TODO: Put metadata - iscan version, timestamp, volume - into the tarball.
@@ -260,13 +251,13 @@ cmd_scan() {
             --env STEM="$name" \
             $image \
             --for $opt_for \
-            "${extra_params[@]}" /vol
+            ${ISCAN_EXTRA_PARAMS:-} /vol
     elif [[ -b "$volume" ]]; then
         $DOCKER run --rm --privileged \
             --env STEM="$name" \
             $image \
             --for $opt_for "$volume" \
-            "${extra_params[@]}"
+            ${ISCAN_EXTRA_PARAMS:-}
     elif [[ "$volume" =~ ^r-[a-z0-9]{24}$ ]]; then
         # - AWS credentials are needed to run `elastio mount` from within docker.
         # - /lib/modules are required to `insmod nbd`.
@@ -277,7 +268,7 @@ cmd_scan() {
             -v /dev:/dev \
             --env STEM="$name" \
             $image \
-            --for $opt_for "${extra_params[@]}" "$volume"
+            --for $opt_for ${ISCAN_EXTRA_PARAMS:-} "$volume"
     else
         die "$volume is neither a directory, nor a block device, nor a recovery point ID"
     fi |
