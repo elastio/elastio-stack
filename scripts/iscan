@@ -260,8 +260,8 @@ cmd_scan() {
     elif [[ -b "$volume" ]]; then
         $DOCKER run --rm --privileged \
             --env STEM="$name" \
-            $env_extra \
             $image \
+            $env_extra \
             --for $opt_for "$volume"
     elif [[ "$volume" =~ ^r-[a-z0-9]{24}$ ]]; then
         # - AWS credentials are needed to run `elastio mount` from within docker.
@@ -272,8 +272,8 @@ cmd_scan() {
             -v /lib/modules:/lib/modules:ro \
             -v /dev:/dev \
             --env STEM="$name" \
-            $env_extra \
             $image \
+            $env_extra \
             --for $opt_for "$volume"
     else
         die "$volume is neither a directory, nor a block device, nor a recovery point ID"
