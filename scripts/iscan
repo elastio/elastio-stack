@@ -252,7 +252,7 @@ cmd_scan() {
     # soon.
     if [[ -d "$volume" ]]; then
         $DOCKER run --rm \
-            --mount readonly,type=bind,source="$volume",destination=/vol \
+            --mount readonly,type=bind,source="$(readlink -f $volume)",destination=/vol \
             --env STEM="$name" \
             $image \
             --for $opt_for \
