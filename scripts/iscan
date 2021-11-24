@@ -244,8 +244,12 @@ cmd_scan() {
 
     # We provide the opportunity to set ISCAN_EXTRA_PARAMS variable, but leave it
     # intentionally undocumented (i.e., not mentioned in the `--help` output).
-    local env_extra=
-    env_extra+=${ISCAN_EXTRA_PARAMS:+--env ISCAN_EXTRA_PARAMS="$ISCAN_EXTRA_PARAMS"}
+
+    if [[ -z ${ISCAN_EXTRA_PARAMS+x} ]]; then
+      extra_params=()
+    else
+      IFS=' ' read -r -a extra_params <<< "$ISCAN_EXTRA_PARAMS"
+    fi
 
     # Scan the volume
     #
@@ -255,14 +259,14 @@ cmd_scan() {
             --mount readonly,type=bind,source="$volume",destination=/vol \
             --env STEM="$name" \
             $image \
-            $env_extra \
-            --for $opt_for /vol
+            --for $opt_for \
+            "${extra_params[@]}" /vol
     elif [[ -b "$volume" ]]; then
         $DOCKER run --rm --privileged \
             --env STEM="$name" \
             $image \
-            $env_extra \
-            --for $opt_for "$volume"
+            --for $opt_for "$volume" \
+            "${extra_params[@]}"
     elif [[ "$volume" =~ ^r-[a-z0-9]{24}$ ]]; then
         # - AWS credentials are needed to run `elastio mount` from within docker.
         # - /lib/modules are required to `insmod nbd`.
@@ -273,8 +277,7 @@ cmd_scan() {
             -v /dev:/dev \
             --env STEM="$name" \
             $image \
-            $env_extra \
-            --for $opt_for "$volume"
+            --for $opt_for "${extra_params[@]}" "$volume"
     else
         die "$volume is neither a directory, nor a block device, nor a recovery point ID"
     fi |
