@@ -245,6 +245,11 @@ cmd_scan() {
     # Scan the volume
     #
     # XXX TODO: Put metadata - iscan version, timestamp, volume - into the tarball.
+    #
+    # NOTE: We've left ISCAN_EXTRA_PARAMS intentionally undocumented (i.e., not
+    # mentioned in the --help message).  We don't want the customers to rely on this
+    # detail of implementation.  It is likely that we'll get rid of this variable
+    # soon.
     if [[ -d "$volume" ]]; then
         $DOCKER run --rm \
             --mount readonly,type=bind,source="$volume",destination=/vol \
