@@ -251,13 +251,15 @@ cmd_scan() {
             --env STEM="$name" \
             $image \
             --for $opt_for \
-            ${ISCAN_EXTRA_PARAMS:-} /vol
+            ${ISCAN_EXTRA_PARAMS:-} \
+            /vol
     elif [[ -b "$volume" ]]; then
         $DOCKER run --rm --privileged \
             --env STEM="$name" \
             $image \
-            --for $opt_for "$volume" \
-            ${ISCAN_EXTRA_PARAMS:-}
+            --for $opt_for \
+            ${ISCAN_EXTRA_PARAMS:-} \
+            "$volume"
     elif [[ "$volume" =~ ^r-[a-z0-9]{24}$ ]]; then
         # - AWS credentials are needed to run `elastio mount` from within docker.
         # - /lib/modules are required to `insmod nbd`.
@@ -268,7 +270,9 @@ cmd_scan() {
             -v /dev:/dev \
             --env STEM="$name" \
             $image \
-            --for $opt_for ${ISCAN_EXTRA_PARAMS:-} "$volume"
+            --for $opt_for \
+            ${ISCAN_EXTRA_PARAMS:-} \
+            "$volume"
     else
         die "$volume is neither a directory, nor a block device, nor a recovery point ID"
     fi |
