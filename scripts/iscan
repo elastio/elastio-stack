@@ -254,8 +254,8 @@ cmd_scan() {
         $DOCKER run --rm \
             --mount readonly,type=bind,source="$volume",destination=/vol \
             --env STEM="$name" \
-            $env_extra \
             $image \
+            $env_extra \
             --for $opt_for /vol
     elif [[ -b "$volume" ]]; then
         $DOCKER run --rm --privileged \
