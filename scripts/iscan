@@ -222,7 +222,7 @@ cmd_scan() {
         #
         # The purpose of the `tr`-ickery below is to remove colons, backslashes,
         # and other nonsence symbols from Windows paths.
-        name=$(basename "$volume" | tr -dc '[:alnum:]')
+        name=$(basename "$volume" | tr -dc '[:alnum:]-')
         name="iscan-$HOSTNAME-$name-$(date --utc +%y%m%d-%H%M%S)"
     fi
 
