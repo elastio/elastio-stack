@@ -308,6 +308,10 @@ cmd_scan() {
     print_info 'done'
 
     # Write the summary of scan results to the standard output.
+    #
+    # `--sensitive` flag instructs `awry-summary` to exit with non-zero status
+    # if there are any hazards (e.g., infected or suspicious files) mentioned
+    # in the `$out` archive.
     local ret=0
     $DOCKER run --rm \
         -v $out:$out:ro \
