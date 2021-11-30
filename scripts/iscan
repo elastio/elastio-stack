@@ -48,13 +48,16 @@ Environment variables:
               Setting S3_BUCKET to an empty string disables S3 upload.
 
 Exit status:
-  iscan exits with status 0 if the processing succeeded and no hazards were found.
+  $prog exits with status 0 if the processing succeeded and no hazards were found.
 
-  When malware or ransomware hazard is detected, iscan exits with status > 200.
-  You can decode the status using this formula:
-    m_code = (m_infected_p << 1) | m_suspicious_p
-    r_code = (r_detected_p << 1) | r_suspicious_p
-    iscan_code = 200 + 10*m_code + r_code
+  When malware or ransomware hazard is detected, $prog exits with status > 200.
+
+      m_code = (m_infected_p << 1) | m_suspicious_p
+      r_code = (r_detected_p << 1) | r_suspicious_p
+      iscan_code = 200 + 10*m_code + r_code
+
+  You can decode the status using the above formula, but it will probably be easier
+  to just parse the JSON output.
 EOF
 }
 
