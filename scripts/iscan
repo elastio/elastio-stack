@@ -24,8 +24,8 @@ usage() {
 Usage: $prog [--for (malware|ransomware|both)] [-N | --name=<stem>] [-y | --upload] [--] <volume>
        $prog upload [--] <file>
 
-Scan file system volume for ransomware and/or upload the archive with scan results
-to S3.
+Scan file system volume for the signs of detonated ransomware and dormant malware.
+Upload the archive with scan results to S3.
 
 Options:
   -h, --help         Show this help and exit
@@ -46,6 +46,18 @@ Positional arguments:
 Environment variables:
   S3_BUCKET   S3 bucket to upload scan results to (default: '$DEFAULT_S3_BUCKET').
               Setting S3_BUCKET to an empty string disables S3 upload.
+
+Exit status:
+  $prog exits with status 0 if the processing succeeded and no hazards were found.
+
+  When malware or ransomware hazard is detected, $prog exits with status > 200.
+
+      m_code = (m_infected_p << 1) | m_suspicious_p
+      r_code = (r_detected_p << 1) | r_suspicious_p
+      iscan_code = 200 + 10*m_code + r_code
+
+  You can decode the status using the above formula, but it will probably be easier
+  to just parse the JSON output.
 EOF
 }
 
@@ -250,6 +262,17 @@ cmd_scan() {
     # mentioned in the --help message).  We don't want the customers to rely on this
     # detail of implementation.  It is likely that we'll get rid of this variable
     # soon.
+    #
+    # REVIEW: We cannot pass `--tty` flag to `docker run`.  If we did, `docker run`
+    # would merge stdout and stderr, and the output tarball would be garbage.
+    # And without `--tty` we can't see the spinners --- `indicatif` hides them.
+    #
+    # [https://docs.rs/indicatif/latest/indicatif/#progress-bars-and-spinners]
+    # | General progress bar behaviors:
+    # |
+    # | * if a non terminal is detected the progress bar will be completely hidden.
+    # |   This makes piping programs to logfiles make sense out of the box.
+    print_info 'Scanning... ' ''
     if [[ -d "$volume" ]]; then
         $DOCKER run --rm \
             --mount readonly,type=bind,source="$(readlink -f $volume)",destination=/vol \
@@ -282,7 +305,19 @@ cmd_scan() {
         die "$volume is neither a directory, nor a block device, nor a recovery point ID"
     fi |
         gzip > $out
-    print_info ' done'
+    print_info 'done'
+
+    # Write the summary of scan results to the standard output.
+    #
+    # `--sensitive` flag instructs `awry-summary` to exit with non-zero status
+    # if there are any hazards (e.g., infected or suspicious files) mentioned
+    # in the `$out` archive.
+    local ret=0
+    $DOCKER run --rm \
+        -v $out:$out:ro \
+        --entrypoint ./awry-summary \
+        $image \
+        --sensitive $out || ret=$?
 
     # The output file has been generated successfully, and we want to keep it.
     # Unset the trap that would remove the file.
@@ -291,7 +326,7 @@ cmd_scan() {
 
     if [[ -z $S3_BUCKET ]]; then
         # S3_BUCKET is set to an empty string ==> don't upload anything.
-        return
+        return $ret
     fi
 
     while ! $opt_upload; do
@@ -303,7 +338,7 @@ cmd_scan() {
                 opt_upload=true
                 ;;
             n|no)
-                return
+                return $ret
                 ;;
         esac
     done
@@ -311,6 +346,7 @@ cmd_scan() {
     if $opt_upload; then
         cmd_upload $out
     fi
+    return $ret
 }
 
 cmd_upload() {
