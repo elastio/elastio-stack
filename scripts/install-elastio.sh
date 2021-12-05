@@ -225,11 +225,6 @@ case ${dist_name} in
     ;;
 
     fedora | fc )
-        if [ ! -z "$driver" ] &&  [ $dist_ver -gt 32 ]; then
-            echo "There are no elastio-snap packages for Fedora 33 and newer (kernel 5.12+) yet. Ignoring driver installation..."
-            unset driver
-        fi
-
         case ${dist_ver} in
             31 | 34 | 35 ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
             * )
@@ -264,6 +259,11 @@ case ${dist_name} in
         exit 1
     ;;
 esac
+
+if [ ! -z "$driver" ] && [ $(uname -r | cut -d. -f1) -ge 5 ] && [ $(uname -r | cut -d. -f2) -ge 15 ]; then
+    echo "Linux kernel 5.15 is not yet supported. Ignoring driver installation..."
+    unset driver
+fi
 
 set -e
 inst_comps="CLI and driver have"
