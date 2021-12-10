@@ -284,7 +284,6 @@ iscan() {
         $DOCKER run --rm --privileged \
             -v ~/.aws:/root/.aws:ro \
             -v /lib/modules:/lib/modules:ro \
-            -v /dev:/dev \
             --env STEM="$name" \
             $image \
             $(iscan_opts "$volume") || echo $? > $ret_file
