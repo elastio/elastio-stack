@@ -266,7 +266,7 @@ iscan() {
     print_info 'Scanning... ' ''
     if [[ -d "$volume" ]]; then
         $DOCKER run --rm \
-            --mount readonly,type=bind,source="$(readlink -f $volume)",destination=/vol \
+            --mount readonly,type=bind,source="$(readlink -f "$volume")",destination=/vol \
             --env STEM="$name" \
             $image \
             $(iscan_opts /vol) || echo $? > $ret_file
