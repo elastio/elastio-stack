@@ -233,6 +233,68 @@ iscan_opts() {
     esac
 }
 
+# Scan the volume.
+iscan() {
+    (( $# == 3 )) || die "[$prog:$LINENO] BUG: Invalid usage"
+    local image=$1
+    local volume="$2"
+    local out_file="$3"
+
+    # The file where the exit code of `docker run` will be stored.
+    #
+    # Environment variables set in a pipeline
+    # (e.g., `{ docker run ... || ret=$?; } | gzip`) are not visible by the
+    # parent shell.
+    #
+    # bash(1):
+    #
+    # > Each command in a pipeline is executed as a separate process
+    # > (i.e., in a subshell).
+    local ret_file="${TMPDIR:-/tmp}/_$prog.ret"
+    trap "rm -f $ret_file" 0
+
+    # REVIEW: We cannot pass `--tty` flag to `docker run`.  If we did, `docker run`
+    # would merge stdout and stderr, and the output archive would be garbage.
+    # And without `--tty` we can't see the spinners --- `indicatif` hides them.
+    #
+    # [https://docs.rs/indicatif/latest/indicatif/#progress-bars-and-spinners]
+    # | General progress bar behaviors:
+    # |
+    # | * if a non terminal is detected the progress bar will be completely hidden.
+    # |   This makes piping programs to logfiles make sense out of the box.
+    echo 0 > $ret_file
+    print_info 'Scanning... ' ''
+    if [[ -d "$volume" ]]; then
+        $DOCKER run --rm \
+            --mount readonly,type=bind,source="$(readlink -f $volume)",destination=/vol \
+            --env STEM="$name" \
+            $image \
+            $(iscan_opts /vol) || echo $? > $ret_file
+    elif [[ -b "$volume" ]]; then
+        $DOCKER run --rm --privileged \
+            --env STEM="$name" \
+            $image \
+            $(iscan_opts "$volume") || echo $? > $ret_file
+    elif [[ "$volume" =~ ^r-[a-z0-9]{24}$ ]]; then
+        # - AWS credentials are needed to run `elastio mount` from within docker.
+        # - /lib/modules are required to `insmod nbd`.
+        # - And /dev gives the container access to NBD device.
+        $DOCKER run --rm --privileged \
+            -v ~/.aws:/root/.aws:ro \
+            -v /lib/modules:/lib/modules:ro \
+            -v /dev:/dev \
+            --env STEM="$name" \
+            $image \
+            $(iscan_opts "$volume") || echo $? > $ret_file
+    else
+        die "$volume is neither a directory, nor a block device, nor a recovery point ID"
+    fi |
+        gzip > $out_file
+    print_info 'done'
+
+    return $(cat $ret_file)
+}
+
 cmd_scan() {
     (( $# == 1 )) || die "[$prog:$LINENO] BUG: Invalid usage"
     local volume="$1"
@@ -272,73 +334,22 @@ cmd_scan() {
     # XXX TODO: If $out exists, ask the user if it's OK to overwrite it.
     trap "rm -f $out" 0
 
-    # The file where the exit code of `docker run` will be stored.
-    #
-    # Environment variables set in a pipeline
-    # (e.g., `{ docker run ... || ret=$?; } | gzip`) are not visible by the
-    # parent shell.
-    #
-    # bash(1):
-    #
-    # > Each command in a pipeline is executed as a separate process
-    # > (i.e., in a subshell).
-    local ret_file="${TMPDIR:-/tmp}/_$prog.ret"
-    trap "rm -f $ret_file" 0
+    local ret=0
+    iscan $image "$volume" "$out" || ret=$?
 
-    # Scan the volume
-    #
-    # NOTE: We've left ISCAN_EXTRA_PARAMS intentionally undocumented (i.e., not
-    # mentioned in the --help message).  We don't want the customers to rely on this
-    # detail of implementation.  It is likely that we'll get rid of this variable
-    # soon.
-    #
-    # REVIEW: We cannot pass `--tty` flag to `docker run`.  If we did, `docker run`
-    # would merge stdout and stderr, and the output tarball would be garbage.
-    # And without `--tty` we can't see the spinners --- `indicatif` hides them.
-    #
-    # [https://docs.rs/indicatif/latest/indicatif/#progress-bars-and-spinners]
-    # | General progress bar behaviors:
-    # |
-    # | * if a non terminal is detected the progress bar will be completely hidden.
-    # |   This makes piping programs to logfiles make sense out of the box.
-    echo 0 > $ret_file
-    print_info 'Scanning... ' ''
-    if [[ -d "$volume" ]]; then
-        $DOCKER run --rm \
-            --mount readonly,type=bind,source="$(readlink -f $volume)",destination=/vol \
-            --env STEM="$name" \
-            $image \
-            $(iscan_opts /vol) || echo $? > $ret_file
-    elif [[ -b "$volume" ]]; then
-        $DOCKER run --rm --privileged \
-            --env STEM="$name" \
-            $image \
-            $(iscan_opts "$volume") || echo $? > $ret_file
-    elif [[ "$volume" =~ ^r-[a-z0-9]{24}$ ]]; then
-        # - AWS credentials are needed to run `elastio mount` from within docker.
-        # - /lib/modules are required to `insmod nbd`.
-        # - And /dev gives the container access to NBD device.
-        $DOCKER run --rm --privileged \
-            -v ~/.aws:/root/.aws:ro \
-            -v /lib/modules:/lib/modules:ro \
-            -v /dev:/dev \
-            --env STEM="$name" \
-            $image \
-            $(iscan_opts "$volume") || echo $? > $ret_file
+    if (( ret == 0 || (201 <= ret && ret <= 203) )); then
+        # The output file has been generated successfully, and we want to keep it.
+        # Unset the trap that would remove the file.
+        trap - 0
+        print_info "Results saved to $out"
     else
-        die "$volume is neither a directory, nor a block device, nor a recovery point ID"
-    fi |
-        gzip > $out
-    print_info 'done'
-
-    # The output file has been generated successfully, and we want to keep it.
-    # Unset the trap that would remove the file.
-    trap - 0
-    print_info "Results saved to $out"
+        print_error "$prog failed, exit code $ret"
+        return $ret
+    fi
 
     if [[ -z $S3_BUCKET ]]; then
         # S3_BUCKET is set to an empty string ==> don't upload anything.
-        return $(cat $ret_file)
+        return $ret
     fi
 
     while ! $opt_upload; do
@@ -350,7 +361,7 @@ cmd_scan() {
                 opt_upload=true
                 ;;
             n|no)
-                return $(cat $ret_file)
+                return $ret
                 ;;
         esac
     done
@@ -358,7 +369,7 @@ cmd_scan() {
     if $opt_upload; then
         cmd_upload $out
     fi
-    return $(cat $ret_file)
+    return $ret
 }
 
 cmd_upload() {
