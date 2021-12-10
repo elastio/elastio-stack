@@ -12,7 +12,8 @@ export PS4='+ [${BASH_SOURCE[0]##*/}:${LINENO}${FUNCNAME[0]:+:${FUNCNAME[0]}}] '
 # To pull the image from private Amazon ECR:
 #     REGISTRY="${aws_account_id}.dkr.ecr.${region}.amazonaws.com/" ./iscan $volume
 #
-REGISTRY=${REGISTRY-public.ecr.aws/elastio-dev/}
+DEFAULT_REGISTRY='public.ecr.aws/elastio-dev/'
+REGISTRY=${REGISTRY-$DEFAULT_REGISTRY}
 
 DEFAULT_S3_BUCKET='elastio-rw-reports-test-bucket'
 S3_BUCKET=${S3_BUCKET-$DEFAULT_S3_BUCKET}
@@ -21,43 +22,47 @@ prog="${0##*/}"
 
 usage() {
     cat <<EOF
-Usage: $prog [--for (malware|ransomware|both)] [-N | --name=<stem>] [-y | --upload] [--] <volume>
-       $prog upload [--] <file>
+Scan a filesystem volume for the signs of detonated ransomware and dormant malware.
+Upload the compressed archive with scan results to S3.
 
-Scan file system volume for the signs of detonated ransomware and dormant malware.
-Upload the archive with scan results to S3.
+USAGE:
+    $prog [--for (malware|ransomware|both)] [-N | --name=<stem>] [-y | --upload] [--] <volume>
+    $prog upload [--] <file>
 
-Options:
-  -h, --help         Show this help and exit
-      --for <what>   Type of scan to perform ("malware"|"ransomware"|"both") (default "both")
-  -N, --name <stem>
-      The "stem" of output files, i.e., the filename stripped of directory and extension.
-      Default is "iscan-\$HOSTNAME-\$(basename \$volume)-\$(date --utc +%y%m%d-%H%M%S)",
-      which gets evaluated to something like "iscan-ip-172-31-44-103-nvme1n1p1-211031-125142"
-  -y, --upload       Answer "yes" to the upload confirmation dialog
+OPTIONS:
+    -h, --help         Show this help and exit
+        --for <what>   Type of scan to perform ("malware"|"ransomware"|"both") (default "both")
+    -N, --name <stem>
+        The "stem" of output files, i.e., the filename stripped of directory and extension.
+        Default is "iscan-\$HOSTNAME-\$(basename \$volume)-\$(date --utc +%y%m%d-%H%M%S)",
+        which gets evaluated to something like "iscan-ip-172-31-44-103-nvme1n1p1-211031-125142"
+    -y, --upload       Answer "yes" to the upload confirmation dialog.
+                       To skip S3 upload, set S3_BUCKET environment variable to
+                       an empty string.
 
-Subcommands:
-  upload      Send the file with scan results to the S3 bucket.  See S3_BUCKET below.
+SUBCOMMANDS:
+    upload      Send the file with scan results to the S3 bucket.  See S3_BUCKET
+                in ENVIRONMENT VARIABLES section below.
 
-Positional arguments:
-  <file>      Path to a locally saved file with scan results
-  <volume>    Path to a directory, path to a block device, or ID of Elastio recovery point
+POSITIONAL ARGUMENTS:
+    <file>      Path to a locally saved file with scan results
+    <volume>    Directory, block device, or ID of the recovery point to scan
 
-Environment variables:
-  S3_BUCKET   S3 bucket to upload scan results to (default: '$DEFAULT_S3_BUCKET').
-              Setting S3_BUCKET to an empty string disables S3 upload.
+ENVIRONMENT VARIABLES:
+    REGISTRY    The registry where 'iscan' Docker image can be found (default: '$DEFAULT_REGISTRY').
+                To use local image, set REGISTRY to an empty string.
+    S3_BUCKET   S3 bucket to upload scan results to (default: '$DEFAULT_S3_BUCKET').
+                Setting S3_BUCKET to an empty string disables S3 upload.
 
-Exit status:
-  $prog exits with status 0 if the processing succeeded and no hazards were found.
+RETURN VALUE:
+    $prog exits with code 0 if the processing succeeded and no hazards were found.
+    If malware or ransomware hazards were detected, $prog exits with code 201-203:
 
-  When malware or ransomware hazard is detected, $prog exits with status > 200.
+    201   Signs of exploded ransomware were found.
+    202   Malware was found.
+    203   Both malware and signs of exploded ransomware were found.
 
-      m_code = (m_infected_p << 1) | m_suspicious_p
-      r_code = (r_detected_p << 1) | r_suspicious_p
-      iscan_code = 200 + 10*m_code + r_code
-
-  You can decode the status using the above formula, but it will probably be easier
-  to just parse the JSON output.
+    Any other non-zero exit code means that processing failed.
 EOF
 }
 
@@ -201,7 +206,7 @@ check_docker() {
 # the authenticated.
 docker_login() {
     local registry=$1
-    [[ -n $registry ]] || die "BUG: ${FUNCNAME[0]}: Invalid usage"
+    [[ -n $registry ]] || die "[$prog:$LINENO] BUG: ${FUNCNAME[0]}: Invalid usage"
 
     if [[ $registry =~ ^public\.ecr\.aws ]]; then
         # Public ECR is always in 'us-east-1'.
@@ -213,6 +218,86 @@ docker_login() {
     fi |
         $DOCKER login --username AWS --password-stdin $registry &>/dev/null ||
         print_warning 'AWS authentication is not available. Proceeding anonymously.'
+}
+
+iscan_opts() {
+    (( $# == 1 )) || die "[$prog:$LINENO] BUG: Invalid usage"
+    local volume="$1"
+
+    case $opt_for in
+        both|malware|ransomware)
+            echo "scan $volume $opt_for"
+            ;;
+        *)
+            die "[$prog:$LINENO] BUG: Impossible happened"
+    esac
+}
+
+# Scan the volume.
+iscan() {
+    (( $# == 3 )) || die "[$prog:$LINENO] BUG: Invalid usage"
+    local image=$1
+    local volume="$2"
+    local out_file="$3"
+
+    # The file where the exit code of `docker run` will be stored.
+    #
+    # Environment variables set in a pipeline
+    # (e.g., `{ docker run ... || ret=$?; } | gzip`) are not visible by the
+    # parent shell.
+    #
+    # bash(1):
+    #
+    # > Each command in a pipeline is executed as a separate process
+    # > (i.e., in a subshell).
+    local ret_file
+    ret_file=$(mktemp)
+    # NOTE: We don't set `trap "rm $ret_file" 0` here, becase the trap is already
+    # set - and unset - in `cmd_scan`, and we don't want to mess with it.
+
+    # REVIEW: We cannot pass `--tty` flag to `docker run`.  If we did, `docker run`
+    # would merge stdout and stderr, and the output archive would be garbage.
+    # And without `--tty` we can't see the spinners --- `indicatif` hides them.
+    #
+    # [https://docs.rs/indicatif/latest/indicatif/#progress-bars-and-spinners]
+    # | General progress bar behaviors:
+    # |
+    # | * if a non terminal is detected the progress bar will be completely hidden.
+    # |   This makes piping programs to logfiles make sense out of the box.
+    echo 0 > $ret_file
+    print_info 'Scanning... ' ''
+    if [[ -d "$volume" ]]; then
+        $DOCKER run --rm \
+            --mount readonly,type=bind,source="$(readlink -f "$volume")",destination=/vol \
+            --env STEM="$name" \
+            $image \
+            $(iscan_opts /vol) || echo $? > $ret_file
+    elif [[ -b "$volume" ]]; then
+        $DOCKER run --rm --privileged \
+            --env STEM="$name" \
+            $image \
+            $(iscan_opts "$volume") || echo $? > $ret_file
+    elif [[ "$volume" =~ ^r-[a-z0-9]{24}$ ]]; then
+        # - AWS credentials are needed to run `elastio mount` from within docker.
+        # - /lib/modules are required to `insmod nbd`.
+        # - And /dev gives the container access to NBD device.
+        $DOCKER run --rm --privileged \
+            -v ~/.aws:/root/.aws:ro \
+            -v /lib/modules:/lib/modules:ro \
+            --env STEM="$name" \
+            $image \
+            $(iscan_opts "$volume") || echo $? > $ret_file
+    else
+        # We cannot `die` here --- the pipeline runs in a subshell.
+        >&2 echo "$volume is neither a directory, nor a block device, nor a recovery point ID"
+        echo 1 > $ret_file
+    fi |
+        gzip > $out_file
+    print_info 'done'
+
+    local ret=$(cat $ret_file)
+    rm $ret_file
+    return $ret
 }
 
 cmd_scan() {
@@ -250,79 +335,22 @@ cmd_scan() {
     fi
 
     # The output file.  It will be removed if `docker run` fails.
-    local out="${TMPDIR:-/tmp}/$name.tar.gz"
+    local out="${TMPDIR:-/tmp}/$name.ndjson.gz"
     # XXX TODO: If $out exists, ask the user if it's OK to overwrite it.
     trap "rm -f $out" 0
 
-    # Scan the volume
-    #
-    # XXX TODO: Put metadata - iscan version, timestamp, volume - into the tarball.
-    #
-    # NOTE: We've left ISCAN_EXTRA_PARAMS intentionally undocumented (i.e., not
-    # mentioned in the --help message).  We don't want the customers to rely on this
-    # detail of implementation.  It is likely that we'll get rid of this variable
-    # soon.
-    #
-    # REVIEW: We cannot pass `--tty` flag to `docker run`.  If we did, `docker run`
-    # would merge stdout and stderr, and the output tarball would be garbage.
-    # And without `--tty` we can't see the spinners --- `indicatif` hides them.
-    #
-    # [https://docs.rs/indicatif/latest/indicatif/#progress-bars-and-spinners]
-    # | General progress bar behaviors:
-    # |
-    # | * if a non terminal is detected the progress bar will be completely hidden.
-    # |   This makes piping programs to logfiles make sense out of the box.
-    print_info 'Scanning... ' ''
-    if [[ -d "$volume" ]]; then
-        $DOCKER run --rm \
-            --mount readonly,type=bind,source="$(readlink -f $volume)",destination=/vol \
-            --env STEM="$name" \
-            $image \
-            --for $opt_for \
-            ${ISCAN_EXTRA_PARAMS:-} \
-            /vol
-    elif [[ -b "$volume" ]]; then
-        $DOCKER run --rm --privileged \
-            --env STEM="$name" \
-            $image \
-            --for $opt_for \
-            ${ISCAN_EXTRA_PARAMS:-} \
-            "$volume"
-    elif [[ "$volume" =~ ^r-[a-z0-9]{24}$ ]]; then
-        # - AWS credentials are needed to run `elastio mount` from within docker.
-        # - /lib/modules are required to `insmod nbd`.
-        # - And /dev gives the container access to NBD device.
-        $DOCKER run --rm --privileged \
-            -v ~/.aws:/root/.aws:ro \
-            -v /lib/modules:/lib/modules:ro \
-            -v /dev:/dev \
-            --env STEM="$name" \
-            $image \
-            --for $opt_for \
-            ${ISCAN_EXTRA_PARAMS:-} \
-            "$volume"
-    else
-        die "$volume is neither a directory, nor a block device, nor a recovery point ID"
-    fi |
-        gzip > $out
-    print_info 'done'
-
-    # Write the summary of scan results to the standard output.
-    #
-    # `--sensitive` flag instructs `awry-summary` to exit with non-zero status
-    # if there are any hazards (e.g., infected or suspicious files) mentioned
-    # in the `$out` archive.
     local ret=0
-    $DOCKER run --rm \
-        -v $out:$out:ro \
-        --entrypoint ./awry-summary \
-        $image \
-        --sensitive $out || ret=$?
+    iscan $image "$volume" "$out" || ret=$?
 
-    # The output file has been generated successfully, and we want to keep it.
-    # Unset the trap that would remove the file.
-    trap - 0
-    print_info "Results saved to $out"
+    if (( ret == 0 || (201 <= ret && ret <= 203) )); then
+        # The output file has been generated successfully, and we want to keep it.
+        # Unset the trap that would remove the file.
+        trap - 0
+        print_info "Results saved to $out"
+    else
+        print_error "$prog failed, exit code $ret"
+        return $ret
+    fi
 
     if [[ -z $S3_BUCKET ]]; then
         # S3_BUCKET is set to an empty string ==> don't upload anything.
