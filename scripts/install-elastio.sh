@@ -3,6 +3,9 @@
 me="./install-elastio.sh"
 default_branch=release
 
+MAX_LINUX_VER=5
+MAX_LINUX_MAJOR_REV=15
+
 cent_fedora_kernel_devel_install()
 {
     if ! yum install -y kernel-devel-$(uname -r) kernel-devel ; then
@@ -260,9 +263,13 @@ case ${dist_name} in
     ;;
 esac
 
-if [ ! -z "$driver" ] && [ $(uname -r | cut -d. -f1) -ge 5 ] && [ $(uname -r | cut -d. -f2) -ge 15 ]; then
-    echo "Linux kernel 5.15 is not yet supported. Ignoring driver installation..."
-    unset driver
+if [ ! -z "$driver" ]; then
+    linux_ver=$(uname -r | cut -d. -f1)
+    linux_major_rev=$(uname -r | cut -d. -f2)
+    if [[ $linux_ver -gt $MAX_LINUX_VER || $linux_ver -eq $MAX_LINUX_VER && $linux_major_rev -gt $MAX_LINUX_MAJOR_REV ]]; then
+        echo "The newest supported Linux kernel is ${MAX_LINUX_VER}.${MAX_LINUX_MAJOR_REV}. Current Linux kernel ${linux_ver}.${linux_major_rev} is not yet supported. Ignoring driver installation..."
+        unset driver
+    fi
 fi
 
 set -e
