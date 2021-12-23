@@ -49,6 +49,9 @@ cent_fedora_install()
 {
     if [ "$1" = "CentOS" ] && grep "Red Hat" -q /etc/redhat-release 2>/dev/null ; then
         yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$2.noarch.rpm
+    elif [ "$1" = "Amazon" ]; then
+        amazon-linux-extras install -y epel
+        yum install -y nbd
     fi
 
     # The elastio-repo package is going to be moved from the x86_64/Packages to the noarch/Packages
