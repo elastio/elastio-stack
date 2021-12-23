@@ -126,7 +126,7 @@ uninstall_all()
         [ $ret -eq 0 ] && which yum >/dev/null 2>&1 && rm -rf /var/cache/yum/*/*/Elastio/
         echo
         [ $ret -eq 0 ] &&
-            echo "All elastio packags has been uninstalled!" ||
+            echo "All Elastio packages have been uninstalled!" ||
             echo "Failed to uninstall some Elastio packages."
     else
         echo "No Elastio packages were found."
