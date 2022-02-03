@@ -85,6 +85,11 @@ deb_ubu_install()
     wget $repo_url/deb/Debian/${debian_ver}/pool/$pkg
     dpkg -i $pkg && rm -f $pkg
     apt-get update
+    # Maybe new kernel was installed recently but machine was not yet booted into it.
+    # In this case dkms will install as dependency linux-headers-[latest kernel version].
+    # But we need to have driver built and loaded right now without reboot, that's why
+    # installing linux-headers package for the current kernel.
+    [ ! -z "$driver" ] && apt-get install -y linux-headers-$(uname -r)
     if [ ! -z "$driver" ] && [ ! -z "$cli" ]; then
         # Install elastio and driver as dependency
         apt-get install -y elastio
