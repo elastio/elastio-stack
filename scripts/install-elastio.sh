@@ -54,6 +54,9 @@ cent_fedora_install()
         yum install -y nbd
     fi
 
+    # Install ntfs-3g to any RPM-based distro except Fedora 35 with the kernel 5.15
+    [ $2 -lt 35 ] && yum install -y ntfs-3g
+
     # The elastio-repo package is going to be moved from the x86_64/Packages to the noarch/Packages
     # This process can take some time and the package location can be different between branches for
     # some period of time. That's why trying both paths.
@@ -98,7 +101,7 @@ deb_ubu_install()
         apt-get install -y elastio-snap-utils
     elif [ ! -z "$cli" ]; then
         # Install just elastio w/o driver as dependency
-        apt-get --no-install-recommends install -y elastio
+        apt-get --no-install-recommends install -y elastio ntfs-3g
     fi
 }
 
