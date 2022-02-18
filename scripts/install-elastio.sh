@@ -54,9 +54,6 @@ cent_fedora_install()
         yum install -y nbd
     fi
 
-    # Install ntfs-3g to any RPM-based distro except Fedora 35 with the kernel 5.15
-    [ $2 -lt 35 ] && yum install -y ntfs-3g
-
     # The elastio-repo package is going to be moved from the x86_64/Packages to the noarch/Packages
     # This process can take some time and the package location can be different between branches for
     # some period of time. That's why trying both paths.
@@ -68,6 +65,9 @@ cent_fedora_install()
     which dnf >/dev/null 2>&1 &&
         cent8_fedora_install $1 $2 $3 ||
         cent7_amazon_install $1 $2 $3
+
+    # Install ntfs-3g to any RPM-based distro except Fedora 35 with the kernel 5.15
+    [ $2 -lt 35 ] && yum install -y ntfs-3g
 }
 
 check_installed()
@@ -154,8 +154,8 @@ usage()
     echo "  -c | --cli-only       : Install Elastio CLI only, without change tracking driver elastio-snap."
     echo
     echo "  -d | --driver-only    : Install change tracking driver elastio-snap only, without Elastio CLI."
-    echo "                          NOTE: There are no elastio-snap packages for Fedora (kernel 5.12 and newer) as of yet."
-    echo "                                So, temporarily this option does nothing on Fedora 33 and newer."
+    echo "                          NOTE: There are no elastio-snap packages for Fedora (kernel versions newer than $MAX_LINUX_VER.$MAX_LINUX_MAJOR_REV) as of yet."
+    echo "                                So, temporarily this option does nothing on the latest Fedora with the latest Linux kernel versions."
     echo
     echo "  -u | --uninstall      : Uninstall all Elastio packages."
     echo
@@ -228,7 +228,7 @@ case ${dist_name} in
         fi
     ;;&
 
-    centos | el | rhel | red | scientific | sl | oracle | ol )
+    centos | almalinux | rocky | el | rhel | red | scientific | sl | oracle | ol )
         case ${dist_ver} in
             7 | 8 ) cent_fedora_install CentOS $(rpm -E %rhel) el ;;
             * )
