@@ -154,8 +154,10 @@ usage()
     echo "  -c | --cli-only       : Install Elastio CLI only, without change tracking driver elastio-snap."
     echo
     echo "  -d | --driver-only    : Install change tracking driver elastio-snap only, without Elastio CLI."
-    echo "                          NOTE: There are no elastio-snap packages for Fedora (kernel versions newer than $MAX_LINUX_VER.$MAX_LINUX_MAJOR_REV) as of yet."
-    echo "                                So, temporarily this option does nothing on the latest Fedora with the latest Linux kernel versions."
+    echo "                          NOTES:"
+    echo "                            - There are no elastio-snap packages for Fedora (kernel versions newer than $MAX_LINUX_VER.$MAX_LINUX_MAJOR_REV) as of yet."
+    echo "                              So, temporarily this option does nothing on the latest Fedora with the latest Linux kernel versions."
+    echo "                            - elastio-snap change tracking driver does not support ARM64 architecture."
     echo
     echo "  -u | --uninstall      : Uninstall all Elastio packages."
     echo
@@ -207,7 +209,23 @@ dist_name=$(echo ${dist_name,,})
 
 if [ -z "$cli" ] && [ -z "$driver" ]; then
     cli=1
-    driver=1
+    [ $(uname -m) != "aarch64" ] && driver=1
+fi
+
+if [ ! -z "$driver" ]; then
+    if [ $(uname -m) == "aarch64" ]; then
+        echo "The change tracking driver is not yet available for ARM64 processors. Ignoring driver installation..."
+        unset driver
+    else
+        linux_ver=$(uname -r | cut -d. -f1)
+        linux_major_rev=$(uname -r | cut -d. -f2)
+        if [[ $linux_ver -gt $MAX_LINUX_VER || $linux_ver -eq $MAX_LINUX_VER && $linux_major_rev -gt $MAX_LINUX_MAJOR_REV ]]; then
+            echo "The newest supported Linux kernel is ${MAX_LINUX_VER}.${MAX_LINUX_MAJOR_REV}. Current Linux kernel ${linux_ver}.${linux_major_rev} is not yet supported. Ignoring driver installation..."
+            unset driver
+        fi
+    fi
+
+    [ -z "$driver" ] && [ -z "$cli" ] && exit 1
 fi
 
 case ${dist_name} in
@@ -273,15 +291,6 @@ case ${dist_name} in
         exit 1
     ;;
 esac
-
-if [ ! -z "$driver" ]; then
-    linux_ver=$(uname -r | cut -d. -f1)
-    linux_major_rev=$(uname -r | cut -d. -f2)
-    if [[ $linux_ver -gt $MAX_LINUX_VER || $linux_ver -eq $MAX_LINUX_VER && $linux_major_rev -gt $MAX_LINUX_MAJOR_REV ]]; then
-        echo "The newest supported Linux kernel is ${MAX_LINUX_VER}.${MAX_LINUX_MAJOR_REV}. Current Linux kernel ${linux_ver}.${linux_major_rev} is not yet supported. Ignoring driver installation..."
-        unset driver
-    fi
-fi
 
 set -e
 inst_comps="CLI and driver have"
