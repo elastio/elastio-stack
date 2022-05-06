@@ -212,7 +212,7 @@ if [ -z "$cli" ] && [ -z "$driver" ]; then
     [ $(uname -m) != "aarch64" ] && driver=1
 fi
 
-if [ ! -z "$driver" ]; then
+if [ -n "$driver" ]; then
     if [ $(uname -m) == "aarch64" ]; then
         echo "The change tracking driver is not yet available for ARM64 processors. Ignoring driver installation..."
         unset driver
