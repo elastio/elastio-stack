@@ -4,7 +4,7 @@ me="./install-elastio.sh"
 default_branch=release
 
 MAX_LINUX_VER=5
-MAX_LINUX_MAJOR_REV=15
+MAX_LINUX_MAJOR_REV=17
 
 cent_fedora_kernel_devel_install()
 {
@@ -77,16 +77,33 @@ check_installed()
 
 deb_ubu_install()
 {
-    debian_ver=$1
+    dist_name=$1                                    # debian or ubuntu
+    dist_ver_dot=$2                                 # 11, 22.04 etc
+    dist_ver=$(echo $dist_ver_dot | tr -cd '[0-9]') # 11, 2204 etc
     if ! check_installed wget || ! check_installed gnupg ; then
         apt-get update
         check_installed wget  || apt-get install -y wget
         check_installed gnupg || apt-get install -y gnupg
     fi
 
-    pkg=elastio-repo_0.0.2-1debian${debian_ver}_all.deb
-    wget $repo_url/deb/Debian/${debian_ver}/pool/$pkg
-    dpkg -i $pkg && rm -f $pkg
+    # For Ubuntu 16.04 - 21.10 we are insatlling Debian packages:
+    # Debian 9 for Ubuntu 18.XX, Debian 10 for Ubuntu 20.XX and 21.XX etc.
+    # And Ubuntu 22.04 and newer have own repository.
+    if [ "$dist_name" == "ubuntu" ] && [ "$dist_ver" -le 2110 ]; then
+        inst_ver=$(($dist_ver/200))
+        dist_ver_dot=$inst_ver
+        inst_name=Debian
+        dist_name=debian
+    else
+        # Ubuntu 22.04 and all Debians - no need to change version and
+        # distro name just with the 1st capital letter.
+        inst_ver=$dist_ver
+        inst_name=${dist_name^}
+    fi
+
+    repo_package=elastio-repo_0.0.2-1${dist_name}${dist_ver_dot}_all.deb
+    wget $repo_url/deb/${inst_name}/${inst_ver}/pool/$repo_package
+    dpkg -i $repo_package && rm -f $repo_package
     apt-get update
     # Maybe new kernel was installed recently but machine was not yet booted into it.
     # In this case dkms will install as dependency linux-headers-[latest kernel version].
@@ -95,10 +112,10 @@ deb_ubu_install()
     [ ! -z "$driver" ] && apt-get install -y linux-headers-$(uname -r)
     if [ ! -z "$driver" ] && [ ! -z "$cli" ]; then
         # Install elastio and driver as dependency
-        apt-get install -y elastio
+        apt-get -o apt::install-recommends=true install -y elastio
     elif [ ! -z "$driver" ]; then
         # Install just driver
-        apt-get install -y elastio-snap-utils
+        apt-get -o apt::install-recommends=true install -y elastio-snap-utils
     elif [ ! -z "$cli" ]; then
         # Install just elastio w/o driver as dependency
         apt-get --no-install-recommends install -y elastio ntfs-3g
@@ -196,9 +213,11 @@ if [ ! -z "$uninstall" ]; then
 fi
 
 # Detect distro name and version
-if [ -f /etc/os-release ]; then
+if which apt-get >/dev/null 2>&1 ; then
     dist_name=$(grep ^ID= /etc/os-release | cut -d= -f2 | tr -d '"')
-    dist_ver=$(grep VERSION_ID /etc/os-release | tr -cd '[0-9].' | cut -d'.' -f1)
+    # 9, 10 or 11 for Debian, but 22.04 for Ubuntu. It's used in the package name like
+    # elastio-repo_0.0.2-1ubuntu22.04_all.deb
+    dist_ver_dot=$(grep VERSION_ID /etc/os-release | tr -cd '[0-9].')
 else
     dist_name=$(cat /etc/system-release 2>/dev/null | cut -d' ' -f1)
     dist_ver=$(cat /etc/system-release 2>/dev/null | tr -cd '[0-9.]' | cut -d'.' -f1)
@@ -228,6 +247,14 @@ if [ -n "$driver" ]; then
     [ -z "$driver" ] && [ -z "$cli" ] && exit 1
 fi
 
+case $(uname -m) in
+    x86_64 | aarch64 ) ;;
+    * )
+        echo "Unsupported CPU architecture $(uname -m)."
+        exit 1
+    ;;
+esac
+
 case ${dist_name} in
     amazon | amzn )
         if [ $dist_ver -ne 2 ]; then
@@ -247,20 +274,30 @@ case ${dist_name} in
     ;;&
 
     centos | almalinux | rocky | el | rhel | red | scientific | sl | oracle | ol )
-        case ${dist_ver} in
-            7 | 8 ) cent_fedora_install CentOS $(rpm -E %rhel) el ;;
-            * )
-                echo "CentOS/RHEL versions 7 and 8 are supported. Current distro version $dist_ver isn't supported."
+        case ${dist_ver}-$(uname -m) in
+            7-x86_64 ) cent_fedora_install CentOS $(rpm -E %rhel) el ;;
+            8-*      ) cent_fedora_install CentOS $(rpm -E %rhel) el ;;
+            *-x86_64 )
+                echo "CentOS/RHEL versions 7 and 8 are supported on x86_64 processors. Current distro version $dist_ver isn't supported."
+                exit 1
+            ;;
+            *-aarch64 )
+                echo "CentOS/RHEL version 8 is supported on aarch64 processors. Current distro version $dist_ver isn't supported."
                 exit 1
             ;;
         esac
     ;;
 
     fedora | fc )
-        case ${dist_ver} in
-            31 | 34 | 35 ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
-            * )
-                echo "Fedora versions 31 and 34, 35 are supported. Current distro version $dist_ver isn't supported."
+        case ${dist_ver}-$(uname -m) in
+            35-x86_64 ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
+            36-*      ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
+            *-x86_64  )
+                echo "Fedora versions 35 and 36 are supported on x86_64 processors. Current distro version $dist_ver isn't supported."
+                exit 1
+            ;;
+            *-aarch64 )
+                echo "Fedora version 36 is supported on aarch64 processors. Current distro version $dist_ver isn't supported."
                 exit 1
             ;;
         esac
@@ -269,14 +306,16 @@ case ${dist_name} in
     debian | ubuntu )
         factor=1
         [ "$dist_name" == "ubuntu" ] && factor=2
-        min_ver=$((9*$factor))
+        # Ubuntu supported versions are 18.XX - 22.XX on amd64 and 20.XX - 22.XX on arm64
+        # Debian supported versions are 9     - 11    on amd64 and 10    - 11    on arm64
+        [ $(uname -m) == "x86_64" ] && min_ver=$((9*$factor)) || min_ver=$((10*$factor))
         max_ver=$((11*$factor))
-        # Let's do not support Ubuntu 22 yet ))
-        [ $max_ver -gt 20 ] && max_ver=20
+        # Here dist_ver is 9 - 11 for Debian and 16 - 22 for Ubuntu
+        dist_ver=$(echo $dist_ver_dot | cut -d'.' -f1)
         if [ $dist_ver -ge $min_ver ] && [ $dist_ver -le $max_ver ]; then
-            deb_ubu_install $(($dist_ver/$factor))
+            deb_ubu_install $dist_name $dist_ver_dot
         else
-            echo "${dist_name^} versions $min_ver-$max_ver are supported. Current distro version $dist_ver isn't supported."
+            echo "${dist_name^} versions $min_ver-$max_ver are supported on $(uname -m) processors. Current distro version $dist_ver_dot isn't supported."
             exit 1
         fi
     ;;
