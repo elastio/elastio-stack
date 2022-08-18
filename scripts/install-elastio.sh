@@ -4,7 +4,7 @@ me="./install-elastio.sh"
 default_branch=release
 
 MAX_LINUX_VER=5
-MAX_LINUX_MAJOR_REV=17
+MAX_LINUX_MAJOR_REV=18
 
 cent_fedora_kernel_devel_install()
 {
