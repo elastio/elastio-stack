@@ -4,7 +4,7 @@ me="./install-elastio.sh"
 default_branch=release
 
 MAX_LINUX_VER=5
-MAX_LINUX_MAJOR_REV=18
+MAX_LINUX_MAJOR_REV=19
 
 cent_fedora_kernel_devel_install()
 {
@@ -86,6 +86,10 @@ deb_ubu_install()
         check_installed gnupg || apt-get install -y gnupg
     fi
 
+    # We don't have separate repo for Pop!OS. Its version starts from 22.04.
+    # So our Ubuntu 22.04 repo is suitable for it.
+    [ "$dist_name" == "pop" ] && dist_name=ubuntu
+
     # For Ubuntu 16.04 - 21.10 we are insatlling Debian packages:
     # Debian 9 for Ubuntu 18.XX, Debian 10 for Ubuntu 20.XX and 21.XX etc.
     # And Ubuntu 22.04 and newer have own repository.
@@ -95,7 +99,7 @@ deb_ubu_install()
         inst_name=Debian
         dist_name=debian
     else
-        # Ubuntu 22.04 and all Debians - no need to change version and
+        # Ubuntu 22.04, PopOS 22.04 and all Debians - no need to change version and
         # distro name just with the 1st capital letter.
         inst_ver=$dist_ver
         inst_name=${dist_name^}
@@ -303,9 +307,9 @@ case ${dist_name} in
         esac
     ;;
 
-    debian | ubuntu )
+    debian | ubuntu | pop )
         factor=1
-        [ "$dist_name" == "ubuntu" ] && factor=2
+        [[ "$dist_name" == "ubuntu" || "$dist_name" == "pop" ]] && factor=2
         # Ubuntu supported versions are 18.XX - 22.XX on amd64 and 20.XX - 22.XX on arm64
         # Debian supported versions are 9     - 11    on amd64 and 10    - 11    on arm64
         [ $(uname -m) == "x86_64" ] && min_ver=$((9*$factor)) || min_ver=$((10*$factor))
@@ -326,7 +330,17 @@ case ${dist_name} in
     ;;
 
     *)
-        echo "The Linux distributive \"$dist_name $dist_ver\" isn't currently supported."
+        if [ -z "$dist_name" ]; then
+            echo "The Linux distribution is not determined."
+            exit 1
+        fi
+        dist_full_name=$dist_name
+        if [ -n "$dist_ver_dot" ]; then
+            dist_full_name="$dist_name $dist_ver_dot"
+        elif [ -n "$dist_ver" ]; then
+            dist_full_name="$dist_name $dist_ver"
+        fi
+        echo "The Linux distribution \"${dist_full_name^}\" isn't currently supported."
         exit 1
     ;;
 esac
