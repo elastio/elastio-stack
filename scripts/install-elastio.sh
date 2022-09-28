@@ -86,10 +86,6 @@ deb_ubu_install()
         check_installed gnupg || apt-get install -y gnupg
     fi
 
-    # We don't have separate repo for Pop!OS. Its version starts from 22.04.
-    # So our Ubuntu 22.04 repo is suitable for it.
-    [ "$dist_name" == "pop" ] && dist_name=ubuntu
-
     # For Ubuntu 16.04 - 21.10 we are insatlling Debian packages:
     # Debian 9 for Ubuntu 18.XX, Debian 10 for Ubuntu 20.XX and 21.XX etc.
     # And Ubuntu 22.04 and newer have own repository.
@@ -309,7 +305,10 @@ case ${dist_name} in
 
     debian | ubuntu | pop )
         factor=1
-        [[ "$dist_name" == "ubuntu" || "$dist_name" == "pop" ]] && factor=2
+        case ${dist_name} in
+            ubuntu | pop ) factor=2 ;;
+        esac
+
         # Ubuntu supported versions are 18.XX - 22.XX on amd64 and 20.XX - 22.XX on arm64
         # Debian supported versions are 9     - 11    on amd64 and 10    - 11    on arm64
         [ $(uname -m) == "x86_64" ] && min_ver=$((9*$factor)) || min_ver=$((10*$factor))
@@ -317,11 +316,40 @@ case ${dist_name} in
         # Here dist_ver is 9 - 11 for Debian and 16 - 22 for Ubuntu
         dist_ver=$(echo $dist_ver_dot | cut -d'.' -f1)
         if [ $dist_ver -ge $min_ver ] && [ $dist_ver -le $max_ver ]; then
+            # We don't have separate repo for Pop!OS.
+            [ "$dist_name" == "pop" ] && dist_name=ubuntu
             deb_ubu_install $dist_name $dist_ver_dot
         else
             echo "${dist_name^} versions $min_ver-$max_ver are supported on $(uname -m) processors. Current distro version $dist_ver_dot isn't supported."
             exit 1
         fi
+    ;;
+
+    # The Linux Mint versioning scheme is a bit hard to understand and a bit discrete.
+    # They have LTS version 5 based on Debian 11 (Bullseye) and versions 19.X - 21.X
+    # based on Ubuntu 18.04 (Bionic), 20.04 (Focal), 22.04 (Jammy) respectively =)
+    # Moreover, they have version 19 (not 19.0) and versions 19.1 - 19.3. The same is with the twenties.
+    # And probably the same will be with the twenty-first.
+    # See more here https://www.linuxmint.com/download_all.php
+    # That's why we'll use discrete version "transformer" from Mint versions to Deian/Ubuntu versions.
+    linuxmint )
+        case $dist_ver_dot in
+            5 ) deb_ubu_install debian 11 ;;
+            19* )
+                if [ $(uname -m) == "x86_64" ]; then
+                    deb_ubu_install debian 9
+                else
+                    echo "The Linux Mint version $dist_ver_dot is not supported on $(uname -m) processors."
+                    exit 1
+                fi
+            ;;
+            20* ) deb_ubu_install debian 10 ;;
+            21* ) deb_ubu_install ubuntu "22.04" ;;
+            *)
+                echo "The Linux Mint version $dist_ver_dot is not supported."
+                exit 1
+            ;;
+        esac
     ;;
 
     opensuse | sles )
