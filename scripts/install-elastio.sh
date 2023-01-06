@@ -3,8 +3,8 @@
 me="./install-elastio.sh"
 default_branch=release
 
-MAX_LINUX_VER=5
-MAX_LINUX_MAJOR_REV=19
+MAX_LINUX_VER=6
+MAX_LINUX_MAJOR_REV=0
 
 cent_fedora_kernel_devel_install()
 {
@@ -66,7 +66,7 @@ cent_fedora_install()
         cent8_fedora_install $1 $2 $3 ||
         cent7_amazon_install $1 $2 $3
 
-    # Install ntfs-3g to any RPM-based distro except Fedora 35 with the kernel 5.15
+    # Install ntfs-3g to any RPM-based distro except Fedora 35+ with the kernel 5.15+
     [ $2 -lt 35 ] && yum install -y ntfs-3g
 }
 
@@ -275,14 +275,14 @@ case ${dist_name} in
 
     centos | almalinux | rocky | el | rhel | red | scientific | sl | oracle | ol )
         case ${dist_ver}-$(uname -m) in
-            7-x86_64 ) cent_fedora_install CentOS $(rpm -E %rhel) el ;;
-            8-*      ) cent_fedora_install CentOS $(rpm -E %rhel) el ;;
-            *-x86_64 )
-                echo "CentOS/RHEL versions 7 and 8 are supported on x86_64 processors. Current distro version $dist_ver isn't supported."
+            7-x86_64  ) cent_fedora_install CentOS $(rpm -E %rhel) el ;;
+            8-* | 9-* ) cent_fedora_install CentOS $(rpm -E %rhel) el ;;
+            *-x86_64  )
+                echo "CentOS/RHEL versions 7, 8 and 9 are supported on x86_64 processors. Current distro version $dist_ver isn't supported."
                 exit 1
             ;;
             *-aarch64 )
-                echo "CentOS/RHEL version 8 is supported on aarch64 processors. Current distro version $dist_ver isn't supported."
+                echo "CentOS/RHEL versions 8 and 9 are supported on aarch64 processors. Current distro version $dist_ver isn't supported."
                 exit 1
             ;;
         esac
@@ -290,14 +290,14 @@ case ${dist_name} in
 
     fedora | fc )
         case ${dist_ver}-$(uname -m) in
-            35-x86_64 ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
-            36-*      ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
+            36-x86_64 ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
+            37-*      ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
             *-x86_64  )
-                echo "Fedora versions 35 and 36 are supported on x86_64 processors. Current distro version $dist_ver isn't supported."
+                echo "Fedora versions 36 and 37 are supported on x86_64 processors. Current distro version $dist_ver isn't supported."
                 exit 1
             ;;
             *-aarch64 )
-                echo "Fedora version 36 is supported on aarch64 processors. Current distro version $dist_ver isn't supported."
+                echo "Fedora version 37 is supported on aarch64 processors. Current distro version $dist_ver isn't supported."
                 exit 1
             ;;
         esac
