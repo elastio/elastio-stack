@@ -111,8 +111,8 @@ deb_ubu_install()
     # installing linux-headers package for the current kernel.
     [ ! -z "$driver" ] && apt-get install -y linux-headers-$(uname -r)
     if [ ! -z "$driver" ] && [ ! -z "$cli" ]; then
-        # Install elastio and driver as dependency
-        apt-get -o apt::install-recommends=true install -y elastio
+        # Install elastio and driver
+        apt-get -o apt::install-recommends=true install -y elastio elastio-snap-utils
     elif [ ! -z "$driver" ]; then
         # Install just driver
         apt-get -o apt::install-recommends=true install -y elastio-snap-utils
