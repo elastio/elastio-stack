@@ -8,9 +8,13 @@ MAX_LINUX_MAJOR_REV=0
 
 cent_fedora_kernel_devel_install()
 {
-    if ! yum install -y kernel-devel-$(uname -r) kernel-devel ; then
+    kernel_devel="kernel-devel"
+    # This is for Oracle Linux support. Oracle Linux may use UEK kernel or regular CentOS's kernel.
+    # We'll install appropriate kernel devel package depending on the currently loaded kernel.
+    uname -r | grep -q uek && kernel_devel="kernel-uek-devel"
+    if ! yum install -y $kernel_devel-$(uname -r) $kernel_devel ; then
         echo
-        echo "Failed to install package kernel-devel-$(uname -r) for the current running kernel."
+        echo "Failed to install package $kernel_devel-$(uname -r) for the current running kernel."
         echo "This package is dependency of the Elastio-Snap kernel driver."
         echo "Please update current kernel to the most recent version, reboot machine into it and try again."
         [[ "$1" == "CentOS" ]] &&  echo "Or enable Vault repo and try again."
@@ -47,7 +51,7 @@ cent8_fedora_install()
 
 cent_fedora_install()
 {
-    if [ "$1" = "CentOS" ] && grep "Red Hat" -q /etc/redhat-release 2>/dev/null ; then
+    if [ "$1" = "CentOS" ] && grep "Red Hat" -q /etc/redhat-release 2>/dev/null && ! rpm -qa | grep -q epel-release ; then
         yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$2.noarch.rpm
     elif [ "$1" = "Amazon" ]; then
         amazon-linux-extras install -y epel
@@ -265,7 +269,7 @@ case ${dist_name} in
     ;;
 
     scientific | sl | oracle | ol )
-        echo "Warning: Oracle Linix and Scientific Linux are not officially supported!"
+        echo "Warning: Oracle Linux and Scientific Linux are not officially supported!"
         if [ -z $force ]; then
             echo "We can try to install packages for CentOS on your system."
             echo "Add '--force' to insist on the installation. But beware this isn't officially supported!"
