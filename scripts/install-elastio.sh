@@ -9,6 +9,8 @@ MAX_LINUX_MAJOR_REV=0
 cent_fedora_kernel_devel_install()
 {
     kernel_devel="kernel-devel"
+    # This is for Oracle Linux support. Oracle Linux may use UEK kernel or regular CentOS's kernel.
+    # We'll install appropriate kernel devel package depending on the currently loaded kernel.
     uname -r | grep -q uek && kernel_devel="kernel-uek-devel"
     if ! yum install -y $kernel_devel-$(uname -r) $kernel_devel ; then
         echo
