@@ -20,13 +20,24 @@ cent_fedora_kernel_devel_install()
         [[ "$1" == "CentOS" ]] &&  echo "Or enable Vault repo and try again."
         exit 1
     fi
+
+    # Kernel devel package on the old UEK kernels may not create 'build' dir in 'modules'.
+    if [ ! -d /usr/lib/modules/$(uname -r)/build/ ]; then
+        ln -sn /usr/src/kernels/$(uname -r) /usr/lib/modules/$(uname -r)/build
+    fi
 }
 
 cent7_amazon_install()
 {
     if [ ! -z "$driver" ]; then
         cent_fedora_kernel_devel_install $1
+        # Hack around zlib package updae on OL7 with versionlock in Oracle Cloud.
+        # dkms-elastio-snap depends on dkms. And dkms depends on zlib-1.2.7-21 which may be necessary to update.
+        zlib_locked=0
+        rpm -qa | grep -q versionlock && yum versionlock list | grep -q zlib && zlib_locked=1
+        [ $zlib_locked -ne 0 ] && yum versionlock delete zlib || true
         yum install -y dkms-elastio-snap elastio-snap-utils
+        [ $zlib_locked -ne 0 ] && yum versionlock zlib || true
     fi
     if [ ! -z "$cli" ]; then
         yum install -y elastio
@@ -52,6 +63,7 @@ cent8_fedora_install()
 cent_fedora_install()
 {
     if [ "$1" = "CentOS" ] && grep "Red Hat" -q /etc/redhat-release 2>/dev/null && ! rpm -qa | grep -q epel-release ; then
+        rpm --import http://download.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-$2
         yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$2.noarch.rpm
     elif [ "$1" = "Amazon" ]; then
         amazon-linux-extras install -y epel
@@ -65,6 +77,8 @@ cent_fedora_install()
     if (($(curl -s -I -L -m 2 "$url" | grep -E "^HTTP" | awk '{ print $2 }' | tail -1) != 200)) ; then
         url=$repo_url/rpm/$1/$2/x86_64/Packages/elastio-repo-0.0.2-1.$3$2.noarch.rpm
     fi
+
+    rpm --import https://repo.assur.io/GPG-KEY-elastio
     yum localinstall -y $url
     which dnf >/dev/null 2>&1 &&
         cent8_fedora_install $1 $2 $3 ||
