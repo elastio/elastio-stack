@@ -4,7 +4,7 @@ me="./install-elastio.sh"
 default_branch=release
 
 MAX_LINUX_VER=6
-MAX_LINUX_MAJOR_REV=0
+MAX_LINUX_MAJOR_REV=2
 
 cent_fedora_kernel_devel_install()
 {
@@ -66,8 +66,14 @@ cent_fedora_install()
         rpm --import http://download.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-$2
         yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$2.noarch.rpm
     elif [ "$1" = "Amazon" ]; then
-        amazon-linux-extras install -y epel
-        yum install -y nbd
+        case $2 in
+            2 )    amazon-linux-extras install -y epel
+                   yum install -y nbd
+            ;;
+            2023 ) arch=$(uname -m)
+                   yum localinstall -y https://fedora.mirror.constant.com/fedora/linux/releases/37/Everything/$arch/os/Packages/n/nbd-3.24-3.fc37.$arch.rpm
+            ;;
+        esac
     fi
 
     # The elastio-repo package is going to be moved from the x86_64/Packages to the noarch/Packages
@@ -275,11 +281,12 @@ esac
 
 case ${dist_name} in
     amazon | amzn )
-        if [ $dist_ver -ne 2 ]; then
-            echo "The Amazon Linux 2 is only supported. Current Amazon Linux $dist_ver isn't supported."
-            exit 1
-        fi
-        cent_fedora_install Amazon $(rpm -E %amzn) amzn
+        case $dist_ver in
+            2 | 2023 ) cent_fedora_install Amazon $(rpm -E %amzn) amzn ;;
+            * )  echo "The Amazon Linux 2 and 2023 are only supported. Current Amazon Linux $dist_ver isn't supported."
+                 exit 1
+            ;;
+        esac
     ;;
 
     scientific | sl | oracle | ol )
