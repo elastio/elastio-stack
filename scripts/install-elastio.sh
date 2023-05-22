@@ -283,7 +283,7 @@ case ${dist_name} in
     amazon | amzn )
         case $dist_ver in
             2 | 2023 ) cent_fedora_install Amazon $(rpm -E %amzn) amzn ;;
-            * )  echo "The Amazon Linux 2 and 2023 are only supported. Current Amazon Linux $dist_ver isn't supported."
+            * )  echo "Only Amazon Linux versions 2 and 2023 are supported. Current Amazon Linux $dist_ver isn't supported."
                  exit 1
             ;;
         esac
