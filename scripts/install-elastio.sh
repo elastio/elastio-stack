@@ -4,7 +4,7 @@ me="./install-elastio.sh"
 default_branch=release
 
 MAX_LINUX_VER=6
-MAX_LINUX_MAJOR_REV=2
+MAX_LINUX_MAJOR_REV=3
 
 cent_fedora_kernel_devel_install()
 {
@@ -315,33 +315,37 @@ case ${dist_name} in
 
     fedora | fc )
         case ${dist_ver}-$(uname -m) in
-            36-x86_64 ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
-            37-*      ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
+            37-x86_64 ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
+            38-*      ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
             *-x86_64  )
-                echo "Fedora versions 36 and 37 are supported on x86_64 processors. Current distro version $dist_ver isn't supported."
+                echo "Fedora versions 37 and 38 are supported on x86_64 processors. Current distro version $dist_ver isn't supported."
                 exit 1
             ;;
             *-aarch64 )
-                echo "Fedora version 37 is supported on aarch64 processors. Current distro version $dist_ver isn't supported."
+                echo "Fedora version 38 is supported on aarch64 processors. Current distro version $dist_ver isn't supported."
                 exit 1
             ;;
         esac
     ;;
 
     debian | ubuntu | pop )
-
-        # Ubuntu supported versions are 18.XX - 22.XX on amd64 and 20.XX - 22.XX on arm64
-        # Debian supported versions are 9     - 12    on amd64 and 10    - 12    on arm64
-        [ $(uname -m) == "x86_64" ] && min_ver=9 || min_ver=10
+        min_ver=10
         max_ver=12
         case ${dist_name} in
-            ubuntu | pop )
-                [ $(uname -m) == "x86_64" ] && min_ver=18 || min_ver=20
+            ubuntu )
+                min_ver=20
                 max_ver=22
-                ;;
+            ;;
+            pop )
+                min_ver=22
+                max_ver=22
+            ;;
         esac
 
-        # Here dist_ver is 9 - 12 for Debian and 16 - 22 for Ubuntu
+        # Ubuntu supported versions are 20.XX - 22.XX,
+        # Debian supported versions are 10    - 12
+        # on both amd64 and arm64.
+        # Pop!OS is equal to Ubuntu 22.04 and exists just of the single version 22.04.
         dist_ver=$(echo $dist_ver_dot | cut -d'.' -f1)
         if [ $dist_ver -ge $min_ver ] && [ $dist_ver -le $max_ver ]; then
             # We don't have separate repo for Pop!OS.
@@ -354,23 +358,13 @@ case ${dist_name} in
     ;;
 
     # The Linux Mint versioning scheme is a bit hard to understand and a bit discrete.
-    # They have LTS version 5 based on Debian 11 (Bullseye) and versions 19.X - 21.X
-    # based on Ubuntu 18.04 (Bionic), 20.04 (Focal), 22.04 (Jammy) respectively =)
-    # Moreover, they have version 19 (not 19.0) and versions 19.1 - 19.3. The same is with the twenties.
-    # And probably the same will be with the twenty-first.
+    # They have LTS version 5 based on Debian 11 (Bullseye) and versions 20.X - 21.X
+    # based on Ubuntu 20.04 (Focal), 22.04 (Jammy) respectively.
     # See more here https://www.linuxmint.com/download_all.php
     # That's why we'll use discrete version "transformer" from Mint versions to Deian/Ubuntu versions.
     linuxmint )
         case $dist_ver_dot in
             5 ) deb_ubu_install debian 11 ;;
-            19* )
-                if [ $(uname -m) == "x86_64" ]; then
-                    deb_ubu_install debian 9
-                else
-                    echo "The Linux Mint version $dist_ver_dot is not supported on $(uname -m) processors."
-                    exit 1
-                fi
-            ;;
             20* ) deb_ubu_install debian 10 ;;
             21* ) deb_ubu_install ubuntu "22.04" ;;
             *)
