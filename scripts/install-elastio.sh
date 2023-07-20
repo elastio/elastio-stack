@@ -329,16 +329,19 @@ case ${dist_name} in
     ;;
 
     debian | ubuntu | pop )
-        factor=1
-        case ${dist_name} in
-            ubuntu | pop ) factor=2 ;;
-        esac
 
         # Ubuntu supported versions are 18.XX - 22.XX on amd64 and 20.XX - 22.XX on arm64
-        # Debian supported versions are 9     - 11    on amd64 and 10    - 11    on arm64
-        [ $(uname -m) == "x86_64" ] && min_ver=$((9*$factor)) || min_ver=$((10*$factor))
-        max_ver=$((11*$factor))
-        # Here dist_ver is 9 - 11 for Debian and 16 - 22 for Ubuntu
+        # Debian supported versions are 9     - 12    on amd64 and 10    - 12    on arm64
+        [ $(uname -m) == "x86_64" ] && min_ver=9 || min_ver=10
+        max_ver=12
+        case ${dist_name} in
+            ubuntu | pop )
+                [ $(uname -m) == "x86_64" ] && min_ver=18 || min_ver=20
+                max_ver=22
+                ;;
+        esac
+
+        # Here dist_ver is 9 - 12 for Debian and 16 - 22 for Ubuntu
         dist_ver=$(echo $dist_ver_dot | cut -d'.' -f1)
         if [ $dist_ver -ge $min_ver ] && [ $dist_ver -le $max_ver ]; then
             # We don't have separate repo for Pop!OS.
