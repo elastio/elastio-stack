@@ -4,7 +4,7 @@ me="./install-elastio.sh"
 default_branch=release
 
 MAX_LINUX_VER=6
-MAX_LINUX_MAJOR_REV=3
+MAX_LINUX_MAJOR_REV=4
 
 cent_fedora_kernel_devel_install()
 {
@@ -315,14 +315,10 @@ case ${dist_name} in
 
     fedora | fc )
         case ${dist_ver}-$(uname -m) in
-            37-x86_64 ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
             38-*      ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
-            *-x86_64  )
-                echo "Fedora versions 37 and 38 are supported on x86_64 processors. Current distro version $dist_ver isn't supported."
-                exit 1
-            ;;
-            *-aarch64 )
-                echo "Fedora version 38 is supported on aarch64 processors. Current distro version $dist_ver isn't supported."
+            39-*      ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
+            *  )
+                echo "Only Fedora versions 38 and 39 are supported. Current distro version $dist_ver isn't supported."
                 exit 1
             ;;
         esac
