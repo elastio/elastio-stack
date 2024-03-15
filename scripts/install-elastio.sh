@@ -84,7 +84,7 @@ cent_fedora_install()
         url=$repo_url/rpm/$1/$2/x86_64/Packages/elastio-repo-0.0.2-1.$3$2.noarch.rpm
     fi
 
-    rpm --import https://repo.assur.io/GPG-KEY-elastio
+    rpm --import https://$repo_host/GPG-KEY-elastio
     yum localinstall -y $url
     which dnf >/dev/null 2>&1 &&
         cent8_fedora_install $1 $2 $3 ||
@@ -229,7 +229,15 @@ fi
 set -e
 
 [ -z "$branch" ] && branch=$default_branch
-repo_url=https://repo.assur.io/$branch/linux
+
+repo_host="repo.elastio.us"
+case "$branch" in
+    "nightly"|"release-candidate"|"release")
+        repo_host="repo.elastio.com"
+        ;;
+esac
+
+repo_url="https://$repo_host/$branch/linux"
 
 if [ ! -z "$uninstall" ]; then
     uninstall_all
