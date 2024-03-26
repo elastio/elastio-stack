@@ -76,16 +76,17 @@ cent_fedora_install()
         esac
     fi
 
-    # The elastio-repo package is going to be moved from the x86_64/Packages to the noarch/Packages
-    # This process can take some time and the package location can be different between branches for
-    # some period of time. That's why trying both paths.
-    url=$repo_url/rpm/$1/$2/noarch/Packages/elastio-repo-0.0.2-1.$3$2.noarch.rpm
-    if (($(curl -s -I -L -m 2 "$url" | grep -E "^HTTP" | awk '{ print $2 }' | tail -1) != 200)) ; then
-        url=$repo_url/rpm/$1/$2/x86_64/Packages/elastio-repo-0.0.2-1.$3$2.noarch.rpm
-    fi
+    # Looking for the latest version of the elastio-repo package from 0.0.3 to 0.0.1
+    for pkg_version in $(seq 3 -1 1); do
+        repo_package_url=$repo_url/rpm/$1/$2/noarch/Packages/elastio-repo-0.0.$pkg_version-1.$3$2.noarch.rpm
 
-    rpm --import https://repo.assur.io/GPG-KEY-elastio
-    yum localinstall -y $url
+        if (($(curl -sIL -m 2 "$repo_package_url" -w "%{http_code}" | tail -1) == 200)) ; then
+            break
+        fi
+    done
+
+    rpm --import https://$repo_host/GPG-KEY-elastio
+    yum localinstall -y $repo_package_url
     which dnf >/dev/null 2>&1 &&
         cent8_fedora_install $1 $2 $3 ||
         cent7_amazon_install $1 $2 $3
@@ -125,8 +126,17 @@ deb_ubu_install()
         inst_name=${dist_name^}
     fi
 
-    repo_package=elastio-repo_0.0.2-1${dist_name}${dist_ver_dot}_all.deb
-    wget $repo_url/deb/${inst_name}/${inst_ver}/pool/$repo_package
+    # Looking for the latest version of elastio-repo package from 0.0.3 to 0.0.1
+    for pkg_version in $(seq 3 -1 1); do
+        repo_package=elastio-repo_0.0.${pkg_version}-1${dist_name}${dist_ver_dot}_all.deb
+        repo_package_url=$repo_url/deb/${inst_name}/${inst_ver}/pool/$repo_package
+
+        if (($(curl -sIL -m 2 "$repo_package_url" -w "%{http_code}" | tail -1) == 200)) ; then
+            break
+        fi
+    done
+
+    wget $repo_package_url
     dpkg -i $repo_package && rm -f $repo_package
     apt-get update
     # Maybe new kernel was installed recently but machine was not yet booted into it.
@@ -229,7 +239,15 @@ fi
 set -e
 
 [ -z "$branch" ] && branch=$default_branch
-repo_url=https://repo.assur.io/$branch/linux
+
+repo_host="repo.elastio.us"
+case "$branch" in
+    "nightly"|"release-candidate"|"release")
+        repo_host="repo.elastio.com"
+        ;;
+esac
+
+repo_url="https://$repo_host/$branch/linux"
 
 if [ ! -z "$uninstall" ]; then
     uninstall_all
