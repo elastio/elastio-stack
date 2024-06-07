@@ -71,7 +71,7 @@ cent_fedora_install()
                    yum install -y nbd
             ;;
             2023 ) arch=$(uname -m)
-                   yum localinstall -y https://fedora.mirror.constant.com/fedora/linux/releases/37/Everything/$arch/os/Packages/n/nbd-3.24-3.fc37.$arch.rpm
+                   yum localinstall -y https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/38/Everything/$arch/os/Packages/n/nbd-3.24-3.fc38.$arch.rpm
             ;;
         esac
     fi
