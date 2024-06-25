@@ -199,16 +199,14 @@ usage()
     echo "Usage examples:"
     echo "   $me"
     echo "   $me -u"
-    echo "   $me --cli-only"
-    echo "   $me --driver-only"
+    echo "   $me -c | --cli-only"
+    echo "   $me -d | --driver-only"
     echo
-    echo "  -c | --cli-only       : Install Elastio CLI only, without change tracking driver elastio-snap."
+    echo "  -c | --cli-only       : Install Elastio CLI, without change tracking driver elastio-snap. (Default)"
     echo
-    echo "  -d | --driver-only    : Install change tracking driver elastio-snap only, without Elastio CLI."
-    echo "                          NOTES:"
-    echo "                            - There are no elastio-snap packages for Fedora (kernel versions newer than $MAX_LINUX_VER.$MAX_LINUX_MAJOR_REV) as of yet."
-    echo "                              So, temporarily this option does nothing on the latest Fedora with the latest Linux kernel versions."
-    echo "                            - elastio-snap change tracking driver does not support ARM64 architecture."
+    echo "  -d | --driver-only    : Install change tracking driver elastio-snap."
+    echo "                          WARNING:"
+    echo "                            - elastio-snap change tracking driver is not supported anymore and could be unavailable for new distros."
     echo
     echo "  -u | --uninstall      : Uninstall all Elastio packages."
     echo
@@ -230,6 +228,10 @@ while [ "$1" != "" ]; do
     esac
         shift
 done
+
+if [ -z "$cli" ] && [ -z "$driver" ]; then
+    cli=1
+fi
 
 if [ "$EUID" -ne 0 ]; then
 	echo "Run as sudo or root."
@@ -267,11 +269,6 @@ fi
 
 # Lowercase dist_name
 dist_name=$(echo ${dist_name,,})
-
-if [ -z "$cli" ] && [ -z "$driver" ]; then
-    cli=1
-    [ $(uname -m) != "aarch64" ] && driver=1
-fi
 
 if [ -n "$driver" ]; then
     if [ $(uname -m) == "aarch64" ]; then
@@ -348,7 +345,7 @@ case ${dist_name} in
         case ${dist_name} in
             ubuntu )
                 min_ver=20
-                max_ver=22
+                max_ver=24
             ;;
             pop )
                 min_ver=22
@@ -356,7 +353,7 @@ case ${dist_name} in
             ;;
         esac
 
-        # Ubuntu supported versions are 20.XX - 22.XX,
+        # Ubuntu supported versions are 20.XX - 24.XX,
         # Debian supported versions are 10    - 12
         # on both amd64 and arm64.
         # Pop!OS is equal to Ubuntu 22.04 and exists just of the single version 22.04.
