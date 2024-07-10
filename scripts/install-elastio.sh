@@ -315,10 +315,9 @@ case ${dist_name} in
 
     centos | almalinux | rocky | el | rhel | red | scientific | sl | oracle | ol )
         case ${dist_ver}-$(uname -m) in
-            7-x86_64  ) cent_fedora_install CentOS $(rpm -E %rhel) el ;;
             8-* | 9-* ) cent_fedora_install CentOS $(rpm -E %rhel) el ;;
             *-x86_64  )
-                echo "CentOS/RHEL versions 7, 8 and 9 are supported on x86_64 processors. Current distro version $dist_ver isn't supported."
+                echo "CentOS/RHEL versions 8 and 9 are supported on x86_64 processors. Current distro version $dist_ver isn't supported."
                 exit 1
             ;;
             *-aarch64 )
