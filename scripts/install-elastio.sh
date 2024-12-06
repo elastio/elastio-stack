@@ -93,6 +93,8 @@ cent_fedora_install()
 
     # Install ntfs-3g to any RPM-based distro except Fedora 35+ with the kernel 5.15+
     [ $2 -lt 35 ] && yum install -y ntfs-3g
+    # Install nbd to any RPM-based distro except Amazon Linux 2 and 2023
+    [ "$1" != "Amazon" ] && yum install -y nbd
 }
 
 check_installed()
@@ -152,7 +154,7 @@ deb_ubu_install()
         apt-get -o apt::install-recommends=true install -y elastio-snap-utils
     elif [ ! -z "$cli" ]; then
         # Install just elastio w/o driver as dependency
-        apt-get --no-install-recommends install -y elastio ntfs-3g
+        apt-get --no-install-recommends install -y elastio ntfs-3g nbd-client
     fi
 }
 
@@ -329,10 +331,9 @@ case ${dist_name} in
 
     fedora | fc )
         case ${dist_ver}-$(uname -m) in
-            38-*      ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
-            39-*      ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
-            *  )
-                echo "Only Fedora versions 38 and 39 are supported. Current distro version $dist_ver isn't supported."
+            39-* | 40-* ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
+            * )
+                echo "Only Fedora versions 39 and 40 are supported. Current distro version $dist_ver isn't supported."
                 exit 1
             ;;
         esac
