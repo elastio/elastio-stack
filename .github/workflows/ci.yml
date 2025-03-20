@@ -30,7 +30,8 @@ jobs:
     strategy:
       matrix:
         project:
-          - asset-account/terraform/stack-set/examples/basic
+          - asset-account/terraform/stack-set/examples/self-managed
+          - asset-account/terraform/stack-set/examples/service-managed
 
     steps:
       - uses: actions/checkout@v4
