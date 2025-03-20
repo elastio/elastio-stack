@@ -5,17 +5,20 @@ module "elastio_asset_accounts" {
     aws = aws.admin
   }
 
-  # Needs to be deployed only after the execution role in the asset account is created
-  depends_on = [aws_iam_role.execution]
+  depends_on = [
+    # Needs to wait for the execution role in the asset account to be fully created
+    aws_iam_role_policy.execution_deployment,
+
+    # Needs to wait for the admin role in the admin account to be fully created
+    aws_iam_role_policy.admin_execution,
+  ]
 
   template_url = var.template_url
 
-  # we are deploying just into a single asset account in this example
-  accounts     = [local.asset_account_id]
+  # We are deploying just into a single asset account in this example
+  accounts = [local.asset_account_id]
 
-  stack_set = {
-    administration_role_arn = aws_iam_role.admin.arn
-  }
+  administration_role_arn = aws_iam_role.admin.arn
 }
 
 # Admin role, that StackSets will use to access the asset accounts to deploy the stacks

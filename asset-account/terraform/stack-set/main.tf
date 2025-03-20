@@ -1,30 +1,26 @@
-
 resource "aws_cloudformation_stack_set" "this" {
-  name = lookup(var.stack_set, "name", "ElastioAssetAccount")
-  description = lookup(var.stack_set, "description",
-    <<-DESCR
-      Elastio Asset Account StackSet creates IAM roles to link the AWS accounts with
-      the Elastio Connector. This allows the Elastio Connector to scan the assets
-      available in the account where the Elastio Asset Account stack instances are
-      deployed.
-    DESCR
-  )
+  tags = merge(var.tags, { "elastio:resource" = true })
 
-  administration_role_arn = lookup(var.stack_set, "administration_role_arn", null)
+  name                    = var.stack_set_name
+  description             = var.stack_set_description
+  administration_role_arn = var.administration_role_arn
+  execution_role_name     = var.execution_role_name
+  permission_model        = var.permission_model
+  call_as                 = var.call_as
+  template_url            = var.template_url
+
+  capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
 
   dynamic "auto_deployment" {
-    for_each = lookup(var.stack_set, "auto_deployment", [])
+    for_each = var.auto_deployment[*]
     content {
       enabled                          = auto_deployment.value.enabled
       retain_stacks_on_account_removal = auto_deployment.value.retain_stacks_on_account_removal
     }
   }
 
-  capabilities        = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
-  execution_role_name = lookup(var.stack_set, "execution_role_name", null)
-
   dynamic "managed_execution" {
-    for_each = lookup(var.stack_set, "managed_execution", [])
+    for_each = var.managed_execution[*]
     content {
       active = managed_execution.value.active
     }
@@ -49,18 +45,6 @@ resource "aws_cloudformation_stack_set" "this" {
     } :
     key => tostring(value)
   }
-
-  permission_model = lookup(var.stack_set, "permission_model", null)
-  call_as          = lookup(var.stack_set, "call_as", null)
-  tags = merge(
-    var.tags,
-    lookup(var.stack_set, "tags", {}),
-    {
-      "elastio:resource" = true
-    },
-  )
-
-  template_url = var.template_url
 
   # Ignore some internal parameter values
   lifecycle {
@@ -95,5 +79,5 @@ resource "aws_cloudformation_stack_instances" "this" {
     }
   }
 
-  retain_stacks = lookup(var.stack_instances, "retain_stacks", null)
+  retain_stacks = var.retain_stacks
 }

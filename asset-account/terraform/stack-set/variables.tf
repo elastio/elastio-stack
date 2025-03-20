@@ -18,10 +18,10 @@ variable "template_url" {
 
 variable "accounts" {
   description = <<-DESCR
-    List of AWS account IDs where the Elastio Asset Account stack instances will
-    be deployed.
+    The IDs AWS accounts where you want to create stack instances.
 
-    You can specify `accounts` or `deployment_targets`, but not both.
+    Specify `accounts` only if you are using `SELF_MANAGED` permissions model.
+    If you are using the `SERVICE_MANAGED` permissions model specify `deployment_targets` instead.
   DESCR
 
   type    = list(string)
@@ -30,16 +30,20 @@ variable "accounts" {
 
 variable "deployment_targets" {
   description = <<-DESCR
-    More flexible way to specify the accounts where the Elastio Asset Account stack.
-    This is passed directly as a parameter to the `aws_cloudformation_stack_instances`
-    resource.
+    The AWS Organizations accounts for which to create stack instances.
 
-    You can specify `accounts` or `deployment_targets`, but not both.
+    Specify `deployment_targets` only if you are using `SERVICE_MANAGED` permissions model.
+    If you are using the `SELF_MANAGED` permissions model specify `accounts` instead.
 
     Details: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_instances#deployment_targets
   DESCR
 
-  type    = any
+  type = object({
+    account_filter_type     = optional(string)
+    accounts                = optional(list(string))
+    accounts_url            = optional(string)
+    organizational_unit_ids = optional(list(string))
+  })
   default = null
 }
 
@@ -66,12 +70,38 @@ variable "tags" {
   default = {}
 }
 
-variable "operation_preferences" {
-  description = <<-DESCR
-    Preferences for how AWS CloudFormation performs a stack set operation.
+variable "auto_deployment" {
+  type = object({
+    enabled                          = optional(bool)
+    retain_stacks_on_account_removal = optional(bool)
+  })
 
-    Details: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_instances#operation_preferences
+  default = null
+}
+
+variable "stack_set_name" {
+  type     = string
+  nullable = false
+  default  = "ElastioAssetAccount"
+}
+
+variable "stack_set_description" {
+  type     = string
+  nullable = false
+  default  = <<-DESCR
+    Elastio Asset Account StackSet creates IAM roles to link the AWS accounts with
+    the Elastio Connector. This allows the Elastio Connector to scan the assets
+    available in the account where the Elastio Asset Account stack instances are
+    deployed.
   DESCR
+}
+
+##################################
+## Deployment execution options ##
+##################################
+
+variable "operation_preferences" {
+  description = "See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_instances#operation_preferences"
 
   type = object({
     concurrency_mode             = optional(string)
@@ -84,30 +114,49 @@ variable "operation_preferences" {
   })
   default = null
 }
-variable "stack_set" {
-  description = <<-DESCR
-    Additional configurations override for the aws_cloudformation_stack_set resource.
-    These parameters will be forwarded to the resource as-is. See the module's source
-    code to see what parameters may be passed here.
 
-    Details: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set
-  DESCR
+variable "managed_execution" {
+  description = "See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#managed_execution-1"
 
-  type    = any
-  default = {}
+  type = object({
+    active = optional(bool)
+  })
+  default = null
 }
 
-variable "stack_instances" {
-  description = <<-DESCR
-    Additional configurations override for the aws_cloudformation_stack_instances resource.
-    These parameters will be forwarded to the resource as-is. See the module's source
-    code to see what parameters may be passed here.
+variable "administration_role_arn" {
+  description = "See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#administration_role_arn-1"
 
-    Details: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_instances
-  DESCR
+  type    = string
+  default = null
+}
 
-  type    = any
-  default = {}
+variable "execution_role_name" {
+  description = "See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#execution_role_name-1"
+
+  type    = string
+  default = null
+}
+
+variable "permission_model" {
+  description = "See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#permission_model-1"
+
+  type    = string
+  default = null
+}
+
+variable "call_as" {
+  description = "See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#call_as-1"
+
+  type    = string
+  default = null
+}
+
+variable "retain_stacks" {
+  description = "See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_instances#retain_stacks-1"
+
+  type    = bool
+  default = null
 }
 
 ######################################################
