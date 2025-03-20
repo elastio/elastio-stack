@@ -1,0 +1,47 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  typos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crate-ci/typos@v1.30.2
+
+  terraform-fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ^1
+          terraform_wrapper: false
+
+      - run: terraform fmt -check
+
+  terraform-validate:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        project:
+          - asset-account/terraform/stack-set/examples/basic
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ^1
+          terraform_wrapper: false
+
+      - run: terraform init -input=false
+        working-directory: ${{ matrix.project }}
+
+      - run: terraform validate
+        working-directory: ${{ matrix.project }}
