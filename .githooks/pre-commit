@@ -13,7 +13,7 @@ set -euo pipefail
 
 script_dir=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 
-tf_modules=$("$script_dir/../scripts/collect-modules.sh")
+tf_modules=$("$script_dir/../.github/scripts/collect-modules.sh")
 
 function command_exists() {
   bin_name=$(basename "$1")

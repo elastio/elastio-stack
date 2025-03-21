@@ -13,6 +13,6 @@ runs:
     - name: Find modules
       id: find-modules
       run: |
-        tf_modules=$(./scripts/collect-modules.sh)
+        tf_modules=$(./.github/scripts/collect-modules.sh)
         echo tf-modules=$(printf '%s\n' "${tf_modules[@]}" | jq -cnR '[inputs]') > $GITHUB_OUTPUT
       shell: bash
