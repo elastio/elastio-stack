@@ -1,6 +1,6 @@
-module "elastio_asset_accounts" {
-  # Use the link from the real terraform registry here. Relative path is used for testing purposes.
+module "elastio_asset_account" {
   source = "../../"
+
   providers = {
     aws = aws.admin
   }
