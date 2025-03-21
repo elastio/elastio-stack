@@ -112,7 +112,9 @@ variable "operation_preferences" {
     max_concurrent_count         = optional(number)
     max_concurrent_percentage    = optional(number)
 
-    # Region settings are not supported, because there must be at most one stack per account in a single region.
+    # Region settings are not supported, because
+    # there must be at most one stack per account
+    # in a single region.
   })
   default = null
 }
