@@ -85,6 +85,21 @@ jobs:
           git diff --exit-code --color=always || ( echo "Terraform docs are
           out-of-date. See the diff above." && exit 1 )
 
+  tflint:
+    runs-on: ubuntu-latest
+
+    env:
+      TFLINT_CONFIG_FILE: "${{ github.workspace }}/.tflint.hcl"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: "latest"
+
+      - run: tflint --init
+      - run: tflint --color --recursive
+
   prettier:
     runs-on: ubuntu-latest
     steps:
