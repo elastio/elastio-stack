@@ -21,15 +21,17 @@ module "account" {
 module "region" {
   source = "./modules/region"
 
+  depends_on = [module.account]
+
   for_each = {
     for connector in var.elastio_cloud_connectors :
     connector.region => connector
   }
 
-  region                       = connector.region
-  vpc_id                       = connector.vpc_id
-  subnet_ids                   = connector.subnet_ids
-  connector_account_stack_name = connector.connector_account_stack_name
+  region                       = each.value.region
+  vpc_id                       = each.value.vpc_id
+  subnet_ids                   = each.value.subnet_ids
+  connector_account_stack_name = each.value.connector_account_stack_name
 
   elastio_pat                 = var.elastio_pat
   elastio_tenant              = var.elastio_tenant

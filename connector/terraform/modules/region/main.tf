@@ -42,17 +42,19 @@ resource "aws_cloudformation_stack" "elastio_nat_provision_stack" {
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
-resource "terraform_data" "elastio_cloud_connector" {
-  depends_on = [aws_cloudformation_stack.elastio_account_level_stack]
+locals {
+  connector_config = {
+    region     = coalesce(var.region, data.aws_region.current.name),
+    account    = data.aws_caller_identity.current.account_id,
+    vpc_id     = var.vpc_id
+    subnet_ids = var.subnet_ids
+  }
+}
 
-  input = each.value
+resource "terraform_data" "elastio_cloud_connector" {
+  input = local.connector_config
   triggers_replace = {
-    connector = {
-      region     = coalesce(var.region, data.aws_region.current.name),
-      account    = data.aws_caller_identity.current.account_id,
-      vpc_id     = var.vpc_id
-      subnet_ids = var.subnet_ids
-    },
+    connector     = local.connector_config,
     account_stack = var.connector_account_stack_name,
   }
 
