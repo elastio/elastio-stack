@@ -1,8 +1,5 @@
 locals {
   elastio_endpoint = "https://${var.elastio_tenant}/public-api/v1"
-  headers = {
-    Authorization = "Bearer ${var.elastio_pat}"
-  }
 }
 
 data "aws_caller_identity" "current" {}
@@ -42,8 +39,8 @@ resource "terraform_data" "elastio_cloud_connector" {
       elastio_endpoint = local.elastio_endpoint
       request_body     = jsonencode(self.input)
 
-      // Using nonsensitive() to workaround the problem that the script's
-      // output is entirely suppressed: https://github.com/hashicorp/terraform/issues/27154
+      # Using nonsensitive() to workaround the problem that the script's
+      # output is entirely suppressed: https://github.com/hashicorp/terraform/issues/27154
       elastio_pat = nonsensitive(var.elastio_pat)
     }
   }

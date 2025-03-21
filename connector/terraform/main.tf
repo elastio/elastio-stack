@@ -23,6 +23,7 @@ module "account" {
   service_linked_roles                  = var.service_linked_roles
   support_role_expiration_date          = var.support_role_expiration_date
   ecr_public_prefix                     = var.ecr_public_prefix
+  network_configuration                 = var.network_configuration
 }
 
 module "region" {

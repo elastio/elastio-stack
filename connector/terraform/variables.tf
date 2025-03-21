@@ -107,6 +107,7 @@ variable "encrypt_with_cmk" {
 
   DESCR
 
+  type    = bool
   default = null
 }
 
