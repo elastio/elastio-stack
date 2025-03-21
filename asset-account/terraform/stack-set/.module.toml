@@ -2,4 +2,4 @@
 name = "aws-elastio-asset-account-stack-set"
 description = "Terraform module for creating an asset account stack"
 type = "terraform"
-version = "0.30.2"
+version = "0.30.3"

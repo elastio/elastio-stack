@@ -29,6 +29,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - run: git config user.name "Tsar Ferris"
+      - run: git config user.email tsar-ferris@elastio.com
 
       - uses: cloudsmith-io/cloudsmith-cli-action@v1.0.3
         with:
