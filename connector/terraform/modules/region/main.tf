@@ -5,40 +5,6 @@ locals {
   }
 }
 
-resource "aws_cloudformation_stack" "elastio_nat_provision_stack" {
-  count = var.elastio_nat_provision_stack == null ? 0 : 1
-
-  name = "elastio-nat-provision-lambda"
-  template_url = join(
-    "/",
-    [
-      "https://elastio-prod-artifacts-us-east-2.s3.us-east-2.amazonaws.com",
-      "contrib/elastio-nat-provision-lambda/${var.elastio_nat_provision_stack}",
-      "cloudformation-lambda.yaml"
-    ]
-  )
-  tags = {
-    "elastio:resource" = "true"
-  }
-  capabilities = ["CAPABILITY_NAMED_IAM"]
-  parameters = {
-    for key, value in {
-      EncryptWithCmk         = var.encrypt_with_cmk
-      LambdaTracing          = var.lambda_tracing
-      IamResourceNamesPrefix = var.iam_resource_names_prefix
-      IamResourceNamesSuffix = var.iam_resource_names_suffix
-      GlobalManagedPolicies = (
-        var.global_managed_policies == null
-        ? null
-        : join(",", var.global_managed_policies)
-      ),
-      GlobalPermissionBoundary = var.global_permission_boundary,
-    } :
-    key => tostring(value)
-    if value != null
-  }
-}
-
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
@@ -55,7 +21,7 @@ resource "terraform_data" "elastio_cloud_connector" {
   input = local.connector_config
   triggers_replace = {
     connector     = local.connector_config,
-    account_stack = var.connector_account_stack_name,
+    account_stack = var.connector_account_stack.name,
   }
 
   provisioner "local-exec" {

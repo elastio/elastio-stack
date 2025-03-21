@@ -1,10 +1,17 @@
+locals {
+  connectors = {
+    for connector in var.elastio_cloud_connectors :
+    connector.region => connector
+  }
+}
 
 module "account" {
   source = "./modules/account"
 
-  elastio_pat                           = var.elastio_pat
-  elastio_tenant                        = var.elastio_tenant
-  elastio_cloud_connectors              = var.elastio_cloud_connectors
+  elastio_pat    = var.elastio_pat
+  elastio_tenant = var.elastio_tenant
+
+  regional_configs                      = var.elastio_cloud_connectors
   encrypt_with_cmk                      = var.encrypt_with_cmk
   lambda_tracing                        = var.lambda_tracing
   global_managed_policies               = var.global_managed_policies
@@ -19,27 +26,22 @@ module "account" {
 }
 
 module "region" {
-  source = "./modules/region"
+  source   = "./modules/region"
+  for_each = local.connectors
 
-  depends_on = [module.account]
+  elastio_pat    = var.elastio_pat
+  elastio_tenant = var.elastio_tenant
 
-  for_each = {
-    for connector in var.elastio_cloud_connectors :
-    connector.region => connector
-  }
+  region                  = each.value.region
+  vpc_id                  = each.value.vpc_id
+  subnet_ids              = each.value.subnet_ids
+  connector_account_stack = each.value.account.cloudformation_stack
+}
 
-  region                       = each.value.region
-  vpc_id                       = each.value.vpc_id
-  subnet_ids                   = each.value.subnet_ids
-  connector_account_stack_name = each.value.connector_account_stack_name
+module "nat_provision" {
+  source   = "./modules/nat-provision"
+  for_each = var.elastio_nat_provision_stack == null ? [] : local.connectors
 
-  elastio_pat                 = var.elastio_pat
-  elastio_tenant              = var.elastio_tenant
-  elastio_nat_provision_stack = var.elastio_nat_provision_stack
-  encrypt_with_cmk            = var.encrypt_with_cmk
-  lambda_tracing              = var.lambda_tracing
-  global_managed_policies     = var.global_managed_policies
-  global_permission_boundary  = var.global_permission_boundary
-  iam_resource_names_prefix   = var.iam_resource_names_prefix
-  iam_resource_names_suffix   = var.iam_resource_names_suffix
+  version                 = var.elastio_nat_provision_stack
+  connector_account_stack = each.value.account.cloudformation_stack
 }
