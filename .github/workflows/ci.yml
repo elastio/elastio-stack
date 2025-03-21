@@ -49,6 +49,12 @@ jobs:
 
   terraform-docs:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        project:
+          - asset-account/terraform/stack-set
+
     steps:
       - uses: actions/checkout@v4
 
@@ -60,11 +66,13 @@ jobs:
             --retry-all-errors \
             --show-error \
             | tar -xz > ./terraform-docs
+        working-directory: ${{ matrix.project }}
 
       - run: chmod +x ./terraform-docs
+        working-directory: ${{ matrix.project }}
 
       - run: ./terraform-docs markdown . > README.md
-        working-directory: asset-account/terraform/stack-set
+        working-directory: ${{ matrix.project }}
 
       - run: >-
           git diff --exit-code --color=always || ( echo "Terraform docs are
