@@ -37,7 +37,6 @@ locals {
     iamResourceNamesStatic            = var.iam_resource_names_static
     disableCustomerManagedIamPolicies = var.disable_customer_managed_iam_policies
     disableServiceLinkedRolesCreation = var.service_linked_roles == "tf"
-    supportRoleExpirationDate         = var.support_role_expiration_date
     ecrPublicPrefix                   = var.ecr_public_prefix
     networkConfiguration              = var.network_configuration
   }

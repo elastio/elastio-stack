@@ -185,25 +185,6 @@ variable "service_linked_roles" {
   }
 }
 
-variable "support_role_expiration_date" {
-  description = <<DESCR
-    Specifies a date when the ElastioSupport role will be disabled. This role
-    contains only the permissions necessary for managing the resources deployed
-    by Elastio and it grants no write access to the resources owned by you.
-    If this role is enabled Elastio will be able to provide support for this
-    Connector to keep it in a healthy state. However, if you don't want this
-    role to be enabled, leave this empty. To enable this support role but only
-    for a defined period of time, enter an expiration date and time in this field,
-    in which case Elastio support personnel will be able to use this role but only
-    until the specified date.
-    The date must be in the format YYYY-MM-DDTHH:MM:SSZ.
-    Example value: 2020-04-01T14:20:30Z.
-  DESCR
-
-  type    = string
-  default = null
-}
-
 variable "ecr_public_prefix" {
   description = <<DESCR
     Repository prefix for the ECR Public registry. Used to configure a pull-through

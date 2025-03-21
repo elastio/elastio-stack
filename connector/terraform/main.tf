@@ -21,7 +21,6 @@ module "account" {
   iam_resource_names_static             = var.iam_resource_names_static
   disable_customer_managed_iam_policies = var.disable_customer_managed_iam_policies
   service_linked_roles                  = var.service_linked_roles
-  support_role_expiration_date          = var.support_role_expiration_date
   ecr_public_prefix                     = var.ecr_public_prefix
   network_configuration                 = var.network_configuration
 }
