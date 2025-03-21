@@ -41,7 +41,7 @@ if command_exists terraform-docs; then
 fi
 
 if command_exists ./node_modules/.bin/prettier; then
-  xargs ./node_modules/.bin/prettier --ignore-unknown --write
+  ./node_modules/.bin/prettier --ignore-unknown --write
 fi
 
 # Add the modified/prettified files to staging
