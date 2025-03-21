@@ -47,6 +47,44 @@ jobs:
       - run: terraform validate
         working-directory: ${{ matrix.project }}
 
+  terraform-docs:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        terraform_module:
+          - asset-account/terraform/stack-set
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci --ignore-scripts
+
+      - run: |
+          curl https://github.com/terraform-docs/terraform-docs/releases/download/v0.19.0/terraform-docs-v0.19.0-linux-amd64.tar.gz \
+            --location \
+            --silent \
+            --retry 5 \
+            --retry-all-errors \
+            --show-error \
+            | tar -xz terraform-docs > ./terraform-docs
+        working-directory: ${{ matrix.terraform_module }}
+
+      - run: chmod +x ./terraform-docs
+        working-directory: ${{ matrix.terraform_module }}
+
+      - run: ./terraform-docs markdown . --output-file README.md
+        working-directory: ${{ matrix.terraform_module }}
+
+      - run: npx prettier -w .
+
+      - run: >-
+          git diff --exit-code --color=always || ( echo "Terraform docs are
+          out-of-date. See the diff above." && exit 1 )
+
   prettier:
     runs-on: ubuntu-latest
     steps:

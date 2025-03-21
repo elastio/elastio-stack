@@ -34,6 +34,14 @@ if command_exists typos; then
   echo "$files" | xargs typos
 fi
 
+if command_exists terraform-docs; then
+  pushd asset-account/terraform/stack-set
+  files="$files asset-account/terraform/stack-set/README.md"
+
+  terraform-docs markdown . --output-file README.md
+  popd
+fi
+
 if command_exists ./node_modules/.bin/prettier; then
   echo "$files" | xargs ./node_modules/.bin/prettier --ignore-unknown --write
 fi
