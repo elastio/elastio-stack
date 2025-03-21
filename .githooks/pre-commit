@@ -35,8 +35,9 @@ if command_exists typos; then
 fi
 
 if command_exists terraform-docs; then
-  cd asset-account/terraform/stack-set
+  pushd asset-account/terraform/stack-set
   terraform-docs markdown . --output-file README.md
+  popd
 fi
 
 if command_exists ./node_modules/.bin/prettier; then

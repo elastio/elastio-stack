@@ -54,11 +54,12 @@ jobs:
 
       - run: |
           curl https://github.com/terraform-docs/terraform-docs/releases/download/v0.19.0/terraform-docs-v0.19.0-linux-amd64.tar.gz \
-            --location
+            --location \
+            --silent \
             --retry 5 \
             --retry-all-errors \
             --show-error \
-            | tar -xz > ./terraform-docs
+            | tar -xz - > ./terraform-docs
 
       - run: chmod +x ./terraform-docs
 
