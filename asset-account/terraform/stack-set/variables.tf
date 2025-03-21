@@ -51,7 +51,7 @@ variable "deployment_targets" {
 ## Optional parameters ##
 #########################
 
-variable "region" {
+variable "stack_instances_region" {
   description = <<-DESCR
     The AWS region where the Elastio Asset Account stack instances will be deployed.
     It is just a single region because this stack is deployed only once per AWS account.
@@ -82,12 +82,14 @@ variable "auto_deployment" {
 }
 
 variable "stack_set_name" {
+  description = "The name of the CloudFormation StackSet."
   type     = string
   nullable = false
   default  = "ElastioAssetAccount"
 }
 
 variable "stack_set_description" {
+  description = "The description of the CloudFormation StackSet."
   type     = string
   nullable = false
   default  = <<-DESCR

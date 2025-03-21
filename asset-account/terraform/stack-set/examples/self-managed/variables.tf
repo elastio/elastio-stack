@@ -13,11 +13,13 @@ variable "template_url" {
 }
 
 variable "admin_account_aws_profile" {
+  description = "The AWS CLI profile name for the admin account."
   type    = string
   default = null
 }
 
 variable "asset_account_aws_profile" {
+  description = "The AWS CLI profile name for the asset account."
   type    = string
   default = null
 }

@@ -61,6 +61,7 @@ resource "aws_cloudformation_stack_instances" "this" {
   stack_set_name = aws_cloudformation_stack_set.this.name
 
   accounts = var.accounts
+  regions  = [var.stack_instances_region]
 
   dynamic "deployment_targets" {
     for_each = var.deployment_targets[*]
