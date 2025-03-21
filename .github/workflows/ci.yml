@@ -59,7 +59,7 @@ jobs:
             --retry 5 \
             --retry-all-errors \
             --show-error \
-            | tar -xz - > ./terraform-docs
+            | tar -xz > ./terraform-docs
 
       - run: chmod +x ./terraform-docs
 
