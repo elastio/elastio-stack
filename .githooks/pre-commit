@@ -36,12 +36,14 @@ fi
 
 if command_exists terraform-docs; then
   pushd asset-account/terraform/stack-set
+  files="$files asset-account/terraform/stack-set/README.md"
+
   terraform-docs markdown . --output-file README.md
   popd
 fi
 
 if command_exists ./node_modules/.bin/prettier; then
-  ./node_modules/.bin/prettier --ignore-unknown --write .
+  echo "$files" | xargs ./node_modules/.bin/prettier --ignore-unknown --write
 fi
 
 # Add the modified/prettified files to staging
