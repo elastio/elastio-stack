@@ -1,6 +1,10 @@
-module "elastio_asset_accounts" {
-  # Use the link from the real terraform registry here. Relative path is used for testing purposes.
-  source = "../../"
+module "elastio_asset_account" {
+  source  = "terraform.cloudsmith.io/public/elastio-asset-account-stack-set/aws"
+  version = "0.33.0"
+
+  # For testing purposes
+  # source = "../../"
+
   providers = {
     aws = aws.admin
   }
