@@ -82,12 +82,14 @@ variable "auto_deployment" {
 }
 
 variable "stack_set_name" {
+  description = "The name of the CloudFormation StackSet."
   type     = string
   nullable = false
   default  = "ElastioAssetAccount"
 }
 
 variable "stack_set_description" {
+  description = "The description of the CloudFormation StackSet."
   type     = string
   nullable = false
   default  = <<-DESCR
