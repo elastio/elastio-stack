@@ -70,7 +70,7 @@ jobs:
             --retry 5 \
             --retry-all-errors \
             --show-error \
-            | tar -xz > ./terraform-docs
+            | tar -xz terraform-docs > ./terraform-docs
         working-directory: ${{ matrix.terraform_module }}
 
       - run: chmod +x ./terraform-docs
