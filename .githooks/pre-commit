@@ -46,6 +46,11 @@ if command_exists ./node_modules/.bin/prettier; then
   echo "$files" | xargs ./node_modules/.bin/prettier --ignore-unknown --write
 fi
 
+if command_exists tflint; then
+  tflint --init
+  tflint --config "$(pwd)/.tflint.hcl" --color --recursive
+fi
+
 # Add the modified/prettified files to staging
 echo "$files" | xargs git add
 
