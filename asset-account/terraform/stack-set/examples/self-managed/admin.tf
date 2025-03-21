@@ -1,9 +1,5 @@
 module "elastio_asset_account" {
-  source  = "terraform.cloudsmith.io/public/elastio-asset-account-stack-set/aws"
-  version = "0.33.0"
-
-  # For testing purposes
-  # source = "../../"
+  source = "../../"
 
   providers = {
     aws = aws.admin
