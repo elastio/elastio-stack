@@ -1,0 +1,33 @@
+name: Find modules in the repository
+description: >
+  Looks for modules in the repository and outputs their paths.
+
+outputs:
+  tf-modules:
+    description: Paths to the Terraform modules found in the repository
+    value: ${{ steps.find-modules.outputs.tf-modules }}
+
+runs:
+  using: composite
+  steps:
+    - name: Find modules
+      id: find-modules
+      run: |
+        set -eu
+
+        tf_modules=()
+        for module_cfg in $(find . -name .module.toml); do
+          case $(yq -o y .module.type $module_cfg) in
+            null)
+              echo "Warning:  module type not found in $module_cfg"
+              continue
+              ;;
+            terraform)
+              echo "Found Terraform module in $module_cfg"
+              tf_modules+=($(dirname $module_cfg))
+              ;;
+          esac
+        done
+
+        echo tf-modules=$(printf '%s\n' "${tf_modules[@]}" | jq -cnR '[inputs]') > $GITHUB_OUTPUT
+      shell: bash
