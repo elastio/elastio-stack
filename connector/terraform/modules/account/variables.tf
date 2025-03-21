@@ -25,7 +25,7 @@ variable "regional_configs" {
   DESCR
 
   type = list(object({
-    region     = string
+    region = string
 
     s3_access_logging = optional(object({
       target_bucket = string
@@ -54,7 +54,7 @@ variable "network_configuration" {
   DESCR
 
   type     = string
-  default  = "Manual"
+  default  = "Auto"
   nullable = false
 
   validation {

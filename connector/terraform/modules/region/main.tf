@@ -11,7 +11,7 @@ data "aws_region" "current" {}
 locals {
   connector_config = {
     region     = coalesce(var.region, data.aws_region.current.name),
-    account    = data.aws_caller_identity.current.account_id,
+    account_id = data.aws_caller_identity.current.account_id,
     vpc_id     = var.vpc_id
     subnet_ids = var.subnet_ids
   }

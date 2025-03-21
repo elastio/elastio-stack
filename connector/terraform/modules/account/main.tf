@@ -39,6 +39,7 @@ locals {
     disableServiceLinkedRolesCreation = var.service_linked_roles == "tf"
     supportRoleExpirationDate         = var.support_role_expiration_date
     ecrPublicPrefix                   = var.ecr_public_prefix
+    networkConfiguration              = var.network_configuration
   }
 
   enriched_regional_configs = [

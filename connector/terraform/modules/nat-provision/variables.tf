@@ -22,7 +22,7 @@ variable "connector_account_stack" {
 ## Optional parameters ##
 #########################
 
-variable "version" {
+variable "template_version" {
   description = <<DESCR
     Specifies the version of Elastio NAT provision stack to deploy (e.g. `v5`).
 

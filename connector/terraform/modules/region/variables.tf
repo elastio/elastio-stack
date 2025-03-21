@@ -59,7 +59,7 @@ variable "vpc_id" {
 
   validation {
     condition = (
-      var.vpc_id == null ? var.connector_account_stack.parameters["networkConfiguration"] == "Auto" : true
+      var.vpc_id == null ? local.network_configuration == "Auto" : true
     )
 
     error_message = <<MSG
@@ -70,7 +70,7 @@ variable "vpc_id" {
 
   validation {
     condition = (
-      var.vpc_id != null ? var.connector_account_stack.parameters["networkConfiguration"] == "Manual" : true
+      var.vpc_id != null ? local.network_configuration == "Manual" : true
     )
 
     error_message = <<-MSG
@@ -93,7 +93,7 @@ variable "subnet_ids" {
 
   validation {
     condition = (
-      length(var.subnet_ids[*]) == 0 ? var.connector_account_stack.parameters["networkConfiguration"] == "Auto" : true
+      length(coalesce(var.subnet_ids, [])) == 0 ? local.network_configuration == "Auto" : true
     )
 
     error_message = <<MSG
@@ -104,7 +104,7 @@ variable "subnet_ids" {
 
   validation {
     condition = (
-      length(var.subnet_ids[*]) > 0 ? var.connector_account_stack.parameters["networkConfiguration"] == "Manual" : true
+      length(coalesce(var.subnet_ids, [])) > 0 ? local.network_configuration == "Manual" : true
     )
 
     error_message = <<-MSG
@@ -112,4 +112,8 @@ variable "subnet_ids" {
       was set to `Manual` in the Connector Account stack.
     MSG
   }
+}
+
+locals {
+  network_configuration = var.connector_account_stack.parameters["networkConfiguration"]
 }

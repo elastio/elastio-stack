@@ -4,7 +4,7 @@ resource "aws_cloudformation_stack" "this" {
     "/",
     [
       "https://elastio-prod-artifacts-us-east-2.s3.us-east-2.amazonaws.com",
-      "contrib/elastio-nat-provision-lambda/${var.version}",
+      "contrib/elastio-nat-provision-lambda/${var.template_version}",
       "cloudformation-lambda.yaml"
     ]
   )

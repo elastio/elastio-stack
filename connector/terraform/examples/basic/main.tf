@@ -13,4 +13,6 @@ module "elastio_connectors" {
       region = "us-east-2",
     }
   ]
+
+  elastio_nat_provision_stack = "v5"
 }

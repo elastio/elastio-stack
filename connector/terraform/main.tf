@@ -35,13 +35,13 @@ module "region" {
   region                  = each.value.region
   vpc_id                  = each.value.vpc_id
   subnet_ids              = each.value.subnet_ids
-  connector_account_stack = each.value.account.cloudformation_stack
+  connector_account_stack = module.account.cloudformation_stack
 }
 
 module "nat_provision" {
   source   = "./modules/nat-provision"
-  for_each = var.elastio_nat_provision_stack == null ? [] : local.connectors
+  for_each = var.elastio_nat_provision_stack == null ? {} : local.connectors
 
-  version                 = var.elastio_nat_provision_stack
-  connector_account_stack = each.value.account.cloudformation_stack
+  template_version        = var.elastio_nat_provision_stack
+  connector_account_stack = module.account.cloudformation_stack
 }
