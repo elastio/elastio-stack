@@ -38,6 +38,11 @@ if command_exists ./node_modules/.bin/prettier; then
   echo "$files" | xargs ./node_modules/.bin/prettier --ignore-unknown --write
 fi
 
+if command_exists terraform-docs; then
+  cd asset-account/terraform/stack-set
+  terraform-docs markdown . --output-file README.md
+fi
+
 # Add the modified/prettified files to staging
 echo "$files" | xargs git add
 

@@ -35,7 +35,7 @@ variable "deployment_targets" {
     Specify `deployment_targets` only if you are using `SERVICE_MANAGED` permissions model.
     If you are using the `SELF_MANAGED` permissions model specify `accounts` instead.
 
-    Details: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_instances#deployment_targets
+    [Details](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_instances#deployment_targets)
   DESCR
 
   type = object({
@@ -71,6 +71,8 @@ variable "tags" {
 }
 
 variable "auto_deployment" {
+  description = "[See docs here](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#auto_deployment-1)"
+
   type = object({
     enabled                          = optional(bool)
     retain_stacks_on_account_removal = optional(bool)
@@ -101,7 +103,7 @@ variable "stack_set_description" {
 ##################################
 
 variable "operation_preferences" {
-  description = "See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_instances#operation_preferences"
+  description = "[See docs here](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_instances#operation_preferences)"
 
   type = object({
     concurrency_mode             = optional(string)
@@ -116,7 +118,7 @@ variable "operation_preferences" {
 }
 
 variable "managed_execution" {
-  description = "See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#managed_execution-1"
+  description = "[See docs here](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#managed_execution-1)"
 
   type = object({
     active = optional(bool)
@@ -125,35 +127,35 @@ variable "managed_execution" {
 }
 
 variable "administration_role_arn" {
-  description = "See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#administration_role_arn-1"
+  description = "[See docs here](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#administration_role_arn-1)"
 
   type    = string
   default = null
 }
 
 variable "execution_role_name" {
-  description = "See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#execution_role_name-1"
+  description = "[See docs here](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#execution_role_name-1)"
 
   type    = string
   default = null
 }
 
 variable "permission_model" {
-  description = "See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#permission_model-1"
+  description = "[See docs here](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#permission_model-1)"
 
   type    = string
   default = null
 }
 
 variable "call_as" {
-  description = "See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#call_as-1"
+  description = "[See docs here](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_set#call_as-1)"
 
   type    = string
   default = null
 }
 
 variable "retain_stacks" {
-  description = "See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_instances#retain_stacks-1"
+  description = "[See docs here](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudformation_stack_instances#retain_stacks-1)"
 
   type    = bool
   default = null

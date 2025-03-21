@@ -47,6 +47,28 @@ jobs:
       - run: terraform validate
         working-directory: ${{ matrix.project }}
 
+  terraform-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: |
+          curl https://github.com/terraform-docs/terraform-docs/releases/download/v0.19.0/terraform-docs-v0.19.0-linux-amd64.tar.gz \
+            --location
+            --retry 5 \
+            --retry-all-errors \
+            --show-error |
+            tar -xz > ./terraform-docs
+
+      - run: chmod +x ./terraform-docs
+
+      - run: ./terraform-docs markdown . > README.md
+        working-directory: asset-account/terraform/stack-set
+
+      - run: >-
+          git diff --exit-code --color=always || ( echo "Terraform docs are
+          out-of-date. See the diff above." && exit 1 )
+
   prettier:
     runs-on: ubuntu-latest
     steps:
