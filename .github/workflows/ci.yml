@@ -43,6 +43,7 @@ jobs:
         project:
           - asset-account/terraform/stack-set/examples/self-managed
           - asset-account/terraform/stack-set/examples/service-managed
+          - connector/terraform/examples/basic
 
     steps:
       - uses: actions/checkout@v4
@@ -91,6 +92,7 @@ jobs:
       - run: ./terraform-docs markdown . --output-file README.md
         working-directory: ${{ matrix.terraform_module }}
 
+      # Apply prettier to the generated docs before we check the diff
       - run: npx prettier -w .
 
       - run: >-

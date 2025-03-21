@@ -9,7 +9,11 @@
 # ln -s ../../.githooks/pre-commit .git/hooks/pre-commit
 # ```
 
-set -euxo pipefail
+set -euo pipefail
+
+script_dir=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+
+tf_modules=$("$script_dir/../.github/scripts/collect-modules.sh")
 
 function command_exists() {
   bin_name=$(basename "$1")
@@ -25,21 +29,17 @@ function command_exists() {
 
 files=$(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g')
 
-if [[ -z "$files" ]]; then
-  echo "No files changed. Exiting the pre-commit hook..."
-  exit 0
-fi
-
 if command_exists typos; then
   echo "$files" | xargs typos
 fi
 
 if command_exists terraform-docs; then
-  pushd asset-account/terraform/stack-set
-  files="$files asset-account/terraform/stack-set/README.md"
+  for tf_module in $tf_modules; do
+    terraform-docs markdown "$tf_module" --output-file "README.md"
 
-  terraform-docs markdown . --output-file README.md
-  popd
+    # Extend `$files` to make `prettier` format the generated README.md
+    files="$files $tf_module/README.md"
+  done
 fi
 
 if command_exists ./node_modules/.bin/prettier; then

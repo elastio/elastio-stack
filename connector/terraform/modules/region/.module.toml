@@ -1,0 +1,5 @@
+[module]
+name = "aws-elastio-connector-region"
+description = "Terraform module for creating the Elastio Connector Region stack"
+type = "terraform"
+version = "0.33.0"
