@@ -10,30 +10,3 @@ variable "elastio_tenant" {
   type        = string
   nullable    = false
 }
-
-variable "elastio_cloud_connectors" {
-  description = <<DESCR
-    List of regions where Cloud Connectors are to be deployed, VPC and subnet(s) to use,
-    and other regional configurations (mostly for regulatory compliance).
-  DESCR
-
-  type = list(object({
-    region     = string
-    vpc_id     = optional(string)
-    subnet_ids = optional(list(string))
-
-    s3_access_logging = optional(object({
-      target_bucket = string
-      target_prefix = optional(string)
-
-      # Can be one of the following:
-      # - SimplePrefix
-      # - PartitionedPrefix:EventTime
-      # - PartitionedPrefix:DeliveryTime
-      target_object_key_format = optional(string)
-    }))
-  }))
-
-  nullable = false
-  default  = []
-}

@@ -1,0 +1,5 @@
+[module]
+name = "aws-elastio-nat-provision"
+description = "Terraform module for creating the Elastio NAT Provision stack"
+type = "terraform"
+version = "0.33.0"

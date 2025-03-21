@@ -1,6 +1,6 @@
-# Elastio Terraform Deployment
+# Elastio Connector Terraform Deployment
 
-This is an example of how you may automate the deployment of the Elastio stack in your AWS account.
+This directory contains terraform modules that you may use to automate the deployment of the Elastio Connector stacks in your AWS accounts.
 
 ## Obtain a Personal Access Token (PAT)
 
@@ -18,51 +18,60 @@ First of all, you'll need a secret PAT token to authenticate your Elastio instal
 
 ## Add Elastio to Your Terraform
 
-There is a terraform module under the `module` directory. It deploys all the necessary resources for Elastio to operate. It includes the following:
+There is are several terraform modules that you can use. We'll review all of them below.
 
-- AWS Cloudformation stack named `elastio-account-level-stack`, which is deployed once per AWS account and contains the required IAM resources
-- Elastio Cloud Connector stack deployed by Elastio Portal via a REST API call. It contains Lambda functions, DynamoDB databases, S3 buckets, AWS Batch compute environments and other non-IAM resources.
-- _Optional._ AWS Cloudformation stack named `elastio-nat-provision-lambda` which deploys NAT gateways in the private subnets where Elastio scan job workers run. This is necessary only if you deploy Elastio into private subnets that don't have outbound Internet access already. Alternatively, you can deploy your own NAT gateway if you want to.
+## Installation
 
-Add this terraform module to your terraform project and specify the necessary input variables. Here you'll need to pass the PAT token you [generated earlier](#obtain-a-personal-access-token-pat), specify your Elastio tenant name and the list of regions with VPC/subnet configurations where you want to deploy Elastio.
+[Configure](../../README.md#configuring-the-terraform-modules-registry) the Elastio terraform module registry before adding any Elastio terraform modules to your project.
+
+### `elastio-connector` module
+
+This module provides the easiest way to get started. It resides as the top-level module in this directory. It deploys all the necessary resources for Elastio to operate in a single module for the entire AWS account and covers many regions.
+
+Add this terraform module to your terraform project and specify the necessary input variables. Here you'll need to pass the PAT token you [generated earlier](#obtain-a-personal-access-token-pat).
 
 > [!IMPORTANT]
 > Make sure `curl` of version _at least_ `7.76.0` is installed on the machine that runs the terraform deployment (`terraform apply`). The provided terraform module uses a `local-exec` provisioner that uses `curl` to do a REST API call to Elastio Portal.
 
-Here is an example usage of the module
+Here is the basic example usage of the module that deploys Elastio Connectors in several regions allowing you to scan your assets in these regions.
 
 ```tf
-provider "aws" {}
-provider "http" {}
+module "elastio_connectors" {
+  source  = "terraform.cloudsmith.io/public/elastio-connector/aws"
+  version = "0.33.0"
 
-module "elastio" {
-  source = "./module"
-  elastio_pat = "{pat_token_from_elastio_portal}"
-  elastio_tenant = "mycompany.app.elastio.com"
+  elastio_tenant = var.elastio_tenant
+  elastio_pat    = var.elastio_pat
+
   elastio_cloud_connectors = [
     {
-      region = "us-east-2"
-      vpc_id = "vpc-0001"
-      subnet_ids = [
-        "subnet-0001",
-        "subnet-0002"
-      ]
+      region = "us-east-1"
     },
     {
-      region = "us-east-1"
-      vpc_id = "vpc-0002"
-      subnet_ids = [
-        "subnet-0003",
-        "subnet-0004",
-      ]
+      region = "us-east-2",
     }
-
-    # Other optional configuration tweaks. See `module/variables.tf` for more info
-    # iam_resource_names_prefix = "prefix"
   ]
-
-  # This input is optional. Here you can specify the version of the NAT provisioning stack.
-  # If you don't need it, just omit this input variable.
-  elastio_nat_provision_stack = "v5"
 }
 ```
+
+You can find the full version of this example in [`examples/basic`](./examples/basic).
+
+This module deploys the following three modules internally, that you can deploy individually if a finer grained control over the deployment is required. You may use them, for example, if you need to deploy regional stacks in separate terraform projects instead of using a single one that deploys all regions.
+
+### `elastio-connector-account` module
+
+Creates an AWS Cloudformation stack named `elastio-account-level-stack`, which is deployed once per AWS account and contains the required IAM resources (roles, policies, etc.) for Elastio Connector to operate in the same account.
+
+See [`modules/account`](./modules/account) directory for details.
+
+### `elastio-connector-region` module
+
+Deploys the Elastio Cloud Connector stack via a REST API call to the Elastio Portal. The final stack contains Lambda functions, DynamoDB databases, S3 buckets, AWS Batch compute environments and other non-IAM resources.
+
+See [`modules/region`](./modules/region) directory for details.
+
+### `elastio-nat-provision` module
+
+_Optional._ AWS Cloudformation stack named `elastio-nat-provision-lambda` which deploys NAT gateways in the private subnets where Elastio scan job workers run. This is necessary only if you deploy Elastio into private subnets that don't have outbound Internet access already. Alternatively, you can deploy your own NAT gateway if you want to.
+
+See [`modules/nat-provision`](./modules/nat-provision) directory for details.

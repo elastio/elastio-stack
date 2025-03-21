@@ -43,6 +43,7 @@ jobs:
         project:
           - asset-account/terraform/stack-set/examples/self-managed
           - asset-account/terraform/stack-set/examples/service-managed
+          - connector/terraform/examples/basic
 
     steps:
       - uses: actions/checkout@v4

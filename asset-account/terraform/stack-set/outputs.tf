@@ -1,4 +1,3 @@
-
 output "stack_set" {
   value       = aws_cloudformation_stack_set.this
   description = <<DESCR

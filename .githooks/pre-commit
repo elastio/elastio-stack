@@ -9,7 +9,7 @@
 # ln -s ../../.githooks/pre-commit .git/hooks/pre-commit
 # ```
 
-set -euxo pipefail
+set -euo pipefail
 
 function command_exists() {
   bin_name=$(basename "$1")
