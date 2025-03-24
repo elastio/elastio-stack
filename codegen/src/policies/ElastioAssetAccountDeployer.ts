@@ -49,8 +49,6 @@ export default {
         "iam:UpdateAssumeRolePolicy",
         "iam:UpdateRoleDescription",
 
-        "iam:PassRole",
-
         "iam:PutRolePolicy",
         "iam:DeleteRolePolicy",
 
@@ -96,6 +94,12 @@ export default {
         "arn:*:iam::*:role/*Elastio*",
         "arn:*:iam::*:policy/*Elastio*",
       ],
+    },
+    {
+      Sid: "ElastioIamPassRole",
+      // PassRole doesn't support tag-based conditions
+      Action: "iam:PassRole",
+      Resource: ["arn:*:iam::*:role/*Elastio*"],
     },
   ],
 } satisfies iam.Policy;

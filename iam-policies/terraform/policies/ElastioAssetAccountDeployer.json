@@ -40,7 +40,6 @@
           "iam:UpdateRole",
           "iam:UpdateAssumeRolePolicy",
           "iam:UpdateRoleDescription",
-          "iam:PassRole",
           "iam:PutRolePolicy",
           "iam:DeleteRolePolicy",
           "iam:PutRolePermissionsBoundary",
@@ -72,6 +71,12 @@
           "arn:*:iam::*:role/*Elastio*",
           "arn:*:iam::*:policy/*Elastio*"
         ],
+        "Effect": "Allow"
+      },
+      {
+        "Sid": "ElastioIamPassRole",
+        "Action": "iam:PassRole",
+        "Resource": ["arn:*:iam::*:role/*Elastio*"],
         "Effect": "Allow"
       }
     ]
