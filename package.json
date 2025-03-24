@@ -1,7 +1,8 @@
 {
   "scripts": {
     "fmt": "prettier --write .",
-    "codegen": "cd codegen && npm start && cd .. && npm run fmt"
+    "codegen": "cd codegen && npm start && cd .. && npm run format-codegen",
+    "format-codegen": "prettier --write ./iam-policies/terraform/{README.md,policies}"
   },
   "devDependencies": {
     "prettier": "^3.5.3"
