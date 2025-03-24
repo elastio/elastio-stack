@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "fmt": "prettier --write ."
+    "fmt": "prettier --write .",
+    "codegen": "cd codegen && npm start"
   },
   "devDependencies": {
     "prettier": "^3.5.3"

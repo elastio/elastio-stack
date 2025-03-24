@@ -18,18 +18,16 @@ data "aws_iam_policy_document" "execution_trust" {
 }
 
 # Specifies the set of permissions required for the deployment of the Cloudfomation stack
-data "aws_iam_policy_document" "execution_deployment" {
-  statement {
-    actions   = ["*"]
-    effect    = "Allow"
-    resources = ["*"]
-  }
+module "elastio_policies" {
+  # Use this module from the Cloudsmith registry via the URL:
+  # source = "terraform.cloudsmith.io/public/elastio-connector-region/aws"
+  source   = "../../../../../iam-policies/terraform"
+  policies = ["ElastioAssetAccountDeployer"]
 }
 
-resource "aws_iam_role_policy" "execution_deployment" {
+resource "aws_iam_role_policy_attachment" "execution_deployment" {
   provider = aws.asset
 
-  name   = "Deployment"
-  policy = data.aws_iam_policy_document.execution_deployment.json
-  role   = aws_iam_role.execution.name
+  policy_arn = module.elastio_policies.policies.ElastioAssetAccountDeployer.arn
+  role       = aws_iam_role.execution.name
 }

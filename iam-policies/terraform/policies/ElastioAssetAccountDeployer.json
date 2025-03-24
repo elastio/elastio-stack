@@ -1,0 +1,79 @@
+{
+  "Description": "Permissions required to deploy the Elastio Asset Account stack",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Action": ["lambda:*", "cloudformation:*", "logs:*", "ssm:*"],
+        "Resource": "*",
+        "Effect": "Allow"
+      },
+      {
+        "Sid": "ElastioIamRead",
+        "Action": [
+          "iam:GetRole",
+          "iam:GetRolePolicy",
+          "iam:ListAttachedRolePolicies",
+          "iam:ListRolePolicies",
+          "iam:ListRoles",
+          "iam:ListPolicyVersions",
+          "iam:ListRoleTags",
+          "iam:ListPolicyTags"
+        ],
+        "Resource": "*",
+        "Effect": "Allow"
+      },
+      {
+        "Sid": "ElastioIamCreate",
+        "Action": ["iam:CreateRole", "iam:CreatePolicy"],
+        "Resource": "*",
+        "Condition": {
+          "StringLike": {
+            "aws:RequestTag/elastio:resource": "*"
+          }
+        },
+        "Effect": "Allow"
+      },
+      {
+        "Sid": "ElastioIamUpdate",
+        "Action": [
+          "iam:UpdateRole",
+          "iam:UpdateAssumeRolePolicy",
+          "iam:UpdateRoleDescription",
+          "iam:PassRole",
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy",
+          "iam:PutRolePermissionsBoundary",
+          "iam:DeleteRolePermissionsBoundary",
+          "iam:AttachRolePolicy",
+          "iam:DetachRolePolicy",
+          "iam:TagRole",
+          "iam:UntagRole",
+          "iam:CreatePolicyVersion",
+          "iam:DeletePolicyVersion",
+          "iam:GetPolicy",
+          "iam:GetPolicyVersion",
+          "iam:SetDefaultPolicyVersion",
+          "iam:TagPolicy",
+          "iam:UntagPolicy"
+        ],
+        "Resource": "*",
+        "Condition": {
+          "StringLike": {
+            "aws:ResourceTag/elastio:resource": "*"
+          }
+        },
+        "Effect": "Allow"
+      },
+      {
+        "Sid": "ElastioIamDelete",
+        "Action": ["iam:DeleteRole", "iam:DeletePolicy"],
+        "Resource": [
+          "arn:*:iam::*:role/*Elastio*",
+          "arn:*:iam::*:policy/*Elastio*"
+        ],
+        "Effect": "Allow"
+      }
+    ]
+  }
+}

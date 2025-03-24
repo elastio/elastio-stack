@@ -7,7 +7,7 @@ module "elastio_asset_account" {
 
   depends_on = [
     # Needs to wait for the execution role in the asset account to be fully created
-    aws_iam_role_policy.execution_deployment,
+    aws_iam_role_policy_attachment.execution_deployment,
 
     # Needs to wait for the admin role in the admin account to be fully created
     aws_iam_role_policy.admin_execution,
