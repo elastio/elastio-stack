@@ -126,3 +126,20 @@ jobs:
           cache: "npm"
       - run: npm ci --ignore-scripts
       - run: npx prettier --check .
+
+  codegen-freshness:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: cd codegen && npm ci --ignore-scripts
+      - run: npm run codegen
+
+      - run: >-
+          git diff --exit-code --color=always || ( echo "Generated code is
+          out-of-date. See the diff above." && exit 1 )
