@@ -1,3 +1,11 @@
+/**
+ * This script generates IAM policies from TypeScript files in the `policies` directory.
+ * We use TypeScript for this because it's easier to maintain shared code for policies
+ * this way and we also get nice compile-time checks from TypeScript for the IAM actions
+ * used in the policies. This codegen logic may also be used to support other kinds of
+ * orchestration tools like CloudFormation, CDK, etc.
+ */
+
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
