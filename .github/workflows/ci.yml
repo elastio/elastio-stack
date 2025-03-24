@@ -137,6 +137,7 @@ jobs:
           node-version: "22"
           cache: "npm"
 
+      - run: npm ci --ignore-scripts
       - run: cd codegen && npm ci --ignore-scripts
       - run: npm run codegen
 
