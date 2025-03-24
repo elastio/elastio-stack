@@ -1,6 +1,6 @@
 # Cleanup
 
-If you'd like to clean up scripts to clean up your environment from resources deployed by Elastio, then download and run the `aws-gc` binary developed by Elastio as shown below.
+If you'd like to clean up your environment from resources deployed by Elastio, then download and run the `aws-gc` binary developed by Elastio as shown below.
 
 It discovers all resources with `elastio:resource` tag or with `elastio` in their name, shows the list of all of them, asks you to confirm by typing `yes`, and starts the deletion.
 
@@ -37,6 +37,6 @@ aws-gc destroy --tag elastio:resource=true --id-pattern elastio
 
 ### Premature Cloudshell Session Termination
 
-If AWS Cloudshell is terminating before `aws-gc` completes, then try restarting it again. The cleanup script is idempotent, so if it's aborted in the middle the deletion progress won't be undone. You can also limit the regions where it discovers the resources with the `--regions` parameter to speed up `aws-gc` a bit.
+If AWS Cloudshell is terminating before `aws-gc` completes, then try restarting it again. The cleanup script is idempotent, and if it's aborted in the middle the deletion progress won't be undone. You can also limit the regions where it discovers the resources with the `--regions` parameter to speed up `aws-gc` a bit.
 
 As a fallback try running the cleanup from your local machine.
