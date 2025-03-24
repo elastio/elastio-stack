@@ -19,8 +19,8 @@ data "aws_iam_policy_document" "execution_trust" {
 
 # Specifies the set of permissions required for the deployment of the Cloudfomation stack
 module "elastio_policies" {
-  # Use this module from the Cloudsmith registry via the URL:
-  # source = "terraform.cloudsmith.io/public/elastio-connector-region/aws"
+  # Use this module from the Cloudsmith registry via the URL in real code:
+  # source = "terraform.cloudsmith.io/public/elastio-iam-policies/aws"
   source   = "../../../../../iam-policies/terraform"
   policies = ["ElastioAssetAccountDeployer"]
 }
