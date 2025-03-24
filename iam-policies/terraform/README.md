@@ -7,8 +7,8 @@ This Terraform module deploys additional Elastio IAM managed policies that you c
 [Configure](../../README.md#configuring-the-terraform-modules-registry) the Elastio terraform module registry, and add this to your project:
 
 ```tf
-module "elastio_nat_provision" {
-  source  = "terraform.cloudsmith.io/public/elastio-nat-provision/aws"
+module "elastio_policies" {
+  source  = "terraform.cloudsmith.io/public/elastio-iam-policies/aws"
   version = "0.33.1"
 
   // Provide input parameters
