@@ -166,7 +166,7 @@ variable "retain_stacks" {
 }
 
 ######################################################
-## Optional parameters of the Cloudformation stacks ##
+## Optional parameters of the CloudFormation stacks ##
 ######################################################
 
 variable "iam_resource_names_prefix" {
