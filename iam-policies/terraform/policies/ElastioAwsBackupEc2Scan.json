@@ -1,0 +1,86 @@
+{
+  "Description": "Allows Elastio to scan AWS Backup recovery points.",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "ReadBackupInventory",
+        "Action": [
+          "backup:ListBackupVaults",
+          "backup:DescribeBackupVault",
+          "backup:ListRecoveryPointsByResource",
+          "backup:DescribeRecoveryPoint",
+          "backup:ListRecoveryPointsByBackupVault",
+          "backup:GetRecoveryPointRestoreMetadata",
+          "backup:ListTags",
+          "backup:ListProtectedResources",
+          "backup:ListProtectedResourcesByBackupVault"
+        ],
+        "Resource": "*",
+        "Effect": "Allow"
+      },
+      {
+        "Sid": "ReadEbsInventory",
+        "Action": [
+          "ec2:DescribeVolumeStatus",
+          "ec2:DescribeVolumes",
+          "ec2:DescribeSnapshots",
+          "ec2:DescribeSnapshotAttribute",
+          "ec2:DescribeTags",
+          "ebs:ListSnapshotBlocks",
+          "ebs:ListChangedBlocks"
+        ],
+        "Resource": "*",
+        "Effect": "Allow"
+      },
+      {
+        "Sid": "ReadEbsSnapshotsData",
+        "Action": ["ebs:GetSnapshotBlock"],
+        "Resource": "*",
+        "Effect": "Allow"
+      },
+      {
+        "Sid": "ReadEc2Inventory",
+        "Action": [
+          "ec2:DescribeInstances",
+          "ec2:DescribeImages",
+          "ec2:DescribeHosts",
+          "ssm:DescribeInstanceInformation"
+        ],
+        "Resource": "*",
+        "Effect": "Allow"
+      },
+      {
+        "Sid": "ShareEbsSnapshot",
+        "Action": ["ec2:ModifySnapshotAttribute"],
+        "Resource": "*",
+        "Condition": {
+          "StringLike": {
+            "ec2:Add/userId": "*"
+          }
+        },
+        "Effect": "Allow"
+      },
+      {
+        "Sid": "KmsAccess",
+        "Condition": {
+          "StringLike": {
+            "aws:ResourceTag/elastio:authorize": "*"
+          }
+        },
+        "Action": [
+          "kms:ReEncryptFrom",
+          "kms:ReEncryptTo",
+          "kms:CreateGrant",
+          "kms:Encrypt",
+          "kms:DescribeKey",
+          "kms:GenerateDataKey",
+          "kms:GenerateDataKeyWithoutPlaintext",
+          "kms:Decrypt"
+        ],
+        "Resource": "*",
+        "Effect": "Allow"
+      }
+    ]
+  }
+}
