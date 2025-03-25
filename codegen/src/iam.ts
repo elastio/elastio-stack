@@ -38,17 +38,16 @@ type Principal =
     };
 
 type Action =
-  | "cloudformation:*"
+  | `${string}:*`
+  | `${iam.AwsBackupActions}`
   | `${iam.AwsCloudformationActions}`
-  | "logs:*"
-  | `${iam.AwsLogsActions}`
-  | "iam:*"
+  | `${iam.AwsEbsActions}`
+  | `${iam.AwsEc2Actions}`
   | `${iam.AwsIamActions}`
-  | "lambda:*"
+  | `${iam.AwsKmsActions}`
   | `${iam.AwsLambdaActions}`
-  | "s3:*"
+  | `${iam.AwsLogsActions}`
   | `${iam.AwsS3Actions}`
-  | "ssm:*"
   | `${iam.AwsSsmActions}`;
 
 type KnownTag =
@@ -65,7 +64,11 @@ type KnownTag =
   | "elastio:authorize"
 
   // Set on every resource deployed by Elastio
-  | "elastio:resource";
+  | "elastio:resource"
+
+  // Set by AWS Backup on resources created as part of AWS Backup restore testing.
+  // The value of this tag is the ID of the AWS Backup restore job.
+  | "awsbackup-restore-test";
 
 export function hasResourceTag(tag: KnownTag) {
   return hasTags("aws:ResourceTag", tag);
