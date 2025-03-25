@@ -36,9 +36,9 @@ Add this terraform module to your terraform project and specify the necessary in
 Here is the basic example usage of the module that deploys Elastio Connectors in several regions allowing you to scan your assets in these regions.
 
 ```tf
-module "elastio_connectors" {
+module "elastio_connector" {
   source  = "terraform.cloudsmith.io/public/elastio-connector/aws"
-  version = "0.33.0"
+  version = "0.33.1"
 
   elastio_tenant = var.elastio_tenant
   elastio_pat    = var.elastio_pat
