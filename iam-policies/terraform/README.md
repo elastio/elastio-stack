@@ -9,7 +9,7 @@ This Terraform module deploys additional Elastio IAM managed policies that you c
 ```tf
 module "elastio_policies" {
   source  = "terraform.cloudsmith.io/public/elastio-iam-policies/aws"
-  version = "0.33.0"
+  version = "0.33.1"
 
   // Provide input parameters
 }
@@ -30,7 +30,7 @@ See the basic [usage example](./examples/basic/main.tf).
 | Policy                                                       | Description                                                    |
 | ------------------------------------------------------------ | -------------------------------------------------------------- |
 | [`ElastioAssetAccountDeployer`][ElastioAssetAccountDeployer] | Permissions required to deploy the Elastio Asset Account stack |
-| [`ElastioAwsBackupEc2Scan`][ElastioAwsBackupEc2Scan]         | Allows Elastio to scan AWS Backup recovery points.             |
+| [`ElastioAwsBackupEc2Scan`][ElastioAwsBackupEc2Scan]         | Allows Elastio to scan AWS Backup EC2 and EBS recovery points. |
 
 [ElastioAssetAccountDeployer]: ../../codegen/src/policies/ElastioAssetAccountDeployer.ts
 [ElastioAwsBackupEc2Scan]: ../../codegen/src/policies/ElastioAwsBackupEc2Scan.ts
