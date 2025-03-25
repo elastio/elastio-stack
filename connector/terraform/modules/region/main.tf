@@ -18,7 +18,7 @@ resource "terraform_data" "elastio_cloud_connector" {
   input = local.connector_config
   triggers_replace = {
     connector     = local.connector_config,
-    account_stack = var.connector_account_stack.name,
+    account_stack = var.connector_account_stack,
   }
 
   provisioner "local-exec" {
