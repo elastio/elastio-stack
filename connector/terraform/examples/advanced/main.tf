@@ -14,4 +14,5 @@ module "elastio_connectors" {
   ]
 
   global_managed_policies = var.global_managed_policies
+  lambda_tracing          = var.lambda_tracing
 }

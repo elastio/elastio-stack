@@ -16,3 +16,12 @@ variable "global_managed_policies" {
   type    = set(string)
   default = null
 }
+
+variable "lambda_tracing" {
+  description = <<DESCR
+    Enable AWS X-Ray tracing for Lambda functions. This increases the cost of
+    the stack. Enable only if needed
+  DESCR
+  type        = bool
+  default     = null
+}
