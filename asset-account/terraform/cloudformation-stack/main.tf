@@ -22,14 +22,4 @@ resource "aws_cloudformation_stack" "this" {
     } :
     key => tostring(value)
   }
-
-  # Ignore some internal parameter values
-  lifecycle {
-    ignore_changes = [
-      parameters["cloudConnectorAccountId"],
-      parameters["cloudConnectorRoleExternalId"],
-      parameters["deploymentNotificationToken"],
-      parameters["deploymentNotificationTopicArn"],
-    ]
-  }
 }
