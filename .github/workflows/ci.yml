@@ -41,7 +41,7 @@ jobs:
 
     strategy:
       matrix:
-        terraform_example: ${{fromJson(needs.meta.outputs.tf-modules)}}
+        terraform_example: ${{fromJson(needs.meta.outputs.tf-examples)}}
 
     steps:
       - uses: actions/checkout@v4

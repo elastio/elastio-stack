@@ -21,7 +21,7 @@ Specify the set of names of policies from the list of [available policies](#avai
 
 The policies are generated using TypeScript. Their final JSON output is stored as `policies/{PolicyName}.json` documents in this module's directory. You can see the original policy source code with comments about the reasoning for some IAM permissions if you click on the policy names in the table below.
 
-See also the basic [usage example](./examples/basic/).
+See the basic [usage example](./examples/basic/main.tf).
 
 ## Available Policies
 
