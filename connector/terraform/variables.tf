@@ -127,7 +127,7 @@ variable "global_managed_policies" {
 
   validation {
     condition = alltrue([
-      for policy in var.global_managed_policies[*] :
+      for policy in coalesce(var.global_managed_policies, []) :
       can(regex("^arn:[^:]*:iam::[0-9]+:policy/.+$", policy))
     ])
     error_message = "global_managed_policies must be a list of ARNs"
