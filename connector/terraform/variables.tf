@@ -122,14 +122,30 @@ variable "lambda_tracing" {
 
 variable "global_managed_policies" {
   description = "List of IAM managed policies ARNs to attach to all Elastio IAM roles"
-  type        = list(string)
+  type        = set(string)
   default     = null
+
+  validation {
+    condition = alltrue([
+      for policy in var.global_managed_policies[*] :
+      can(regex("^arn:[^:]*:iam::[0-9]+:policy/.+$", policy))
+    ])
+    error_message = "global_managed_policies must be a list of ARNs"
+  }
 }
 
 variable "global_permission_boundary" {
   description = "The ARN of the IAM managed policy to use as a permission boundary for all Elastio IAM roles"
   type        = string
   default     = null
+
+  validation {
+    condition = (
+      var.global_permission_boundary == null ||
+      can(regex("^arn:[^:]*:iam::[0-9]+:policy/.+$", var.global_permission_boundary))
+    )
+    error_message = "global_permission_boundary must be an ARN"
+  }
 }
 
 variable "iam_resource_names_prefix" {
