@@ -1,7 +1,7 @@
 import * as iam from "../iam";
 
 export default {
-  description: "Allows Elastio to scan AWS Backup recovery points.",
+  description: "Allows Elastio to scan AWS Backup EC2 recovery points.",
 
   statements: [
     {
@@ -41,7 +41,7 @@ export default {
         // Common for all resources
         "ec2:DescribeTags",
 
-        // Used for cost estimation
+        // Used for cost estimation and scanning itself
         "ebs:ListSnapshotBlocks",
         "ebs:ListChangedBlocks",
       ],
@@ -70,7 +70,7 @@ export default {
       Action: ["ec2:ModifySnapshotAttribute"],
       Resource: "*",
       Condition: {
-        // Needed to add createVolumePermission for the sharing the snapshot
+        // Needed to add createVolumePermission for sharing the snapshot
         // with the connector account.
         StringLike: {
           "ec2:Add/userId": "*",
@@ -78,6 +78,7 @@ export default {
       },
     },
 
+    // Required for encrypted backups
     {
       Sid: "KmsAccess",
 
