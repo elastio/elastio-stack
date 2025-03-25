@@ -10,7 +10,6 @@ while IFS= read -r -d '' module_cfg; do
         exit 1
         ;;
     terraform)
-        echo "Found Terraform module in $module_cfg" >&2
         tf_modules+=("$(dirname "$module_cfg")")
         ;;
     esac

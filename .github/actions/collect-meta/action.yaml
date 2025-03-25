@@ -1,0 +1,29 @@
+name: Collect metadata about the repository
+description: >
+  Looks for modules and examples in the repository and outputs their paths.
+
+outputs:
+  tf-modules:
+    description: Paths to the Terraform modules found in the repository
+    value: ${{ steps.find-modules.outputs.tf-modules }}
+
+  tf-examples:
+    description: Paths to the Terraform examples found in the repository
+    value: ${{ steps.find-examples.outputs.tf-examples }}
+
+runs:
+  using: composite
+  steps:
+    - name: Find modules
+      id: find-modules
+      run: |
+        tf_modules=$(./.github/scripts/collect-modules.sh | jq -cnR '[inputs]')
+        echo "tf-modules=$tf_modules" > "$GITHUB_OUTPUT"
+      shell: bash
+
+    - name: Find examples
+      id: find-examples
+      run: |
+        tf_examples=$(./.github/scripts/collect-examples.sh | jq -cnR '[inputs]')
+        echo "tf-examples=$tf_examples" > "$GITHUB_OUTPUT"
+      shell: bash

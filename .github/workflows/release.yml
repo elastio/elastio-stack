@@ -4,26 +4,26 @@ on:
   workflow_dispatch:
 
 jobs:
-  collect-modules:
+  meta:
     runs-on: ubuntu-latest
     outputs:
-      tf-modules: ${{ steps.collect-modules.outputs.tf-modules }}
+      tf-modules: ${{ steps.meta.outputs.tf-modules }}
+      tf-examples: ${{ steps.meta.outputs.tf-examples }}
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: ./.github/actions/collect-modules
-        id: collect-modules
+      - uses: ./.github/actions/collect-meta
+        id: meta
 
   release-module:
     runs-on: ubuntu-latest
-    needs: ["collect-modules"]
+    needs: [meta]
     permissions:
       contents: write
       actions: write
     strategy:
       matrix:
-        module: ${{fromJson(needs.collect-modules.outputs.tf-modules)}}
+        module: ${{fromJson(needs.meta.outputs.tf-modules)}}
       fail-fast: false
 
     steps:

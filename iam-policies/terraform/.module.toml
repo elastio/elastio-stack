@@ -1,0 +1,5 @@
+[module]
+name = "aws-elastio-iam-policies"
+description = "A collection of AWS IAM policies for use with Elastio"
+type = "terraform"
+version = "0.33.0"

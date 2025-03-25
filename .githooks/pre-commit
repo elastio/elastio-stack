@@ -42,6 +42,11 @@ if command_exists terraform-docs; then
   done
 fi
 
+if command_exists npm; then
+  npm run codegen
+  files="$files $script_dir/../iam-policies/terraform/policies"
+fi
+
 if command_exists ./node_modules/.bin/prettier; then
   echo "$files" | xargs ./node_modules/.bin/prettier --ignore-unknown --write
 fi

@@ -6,16 +6,16 @@ on:
   pull_request:
 
 jobs:
-  collect-modules:
+  meta:
     runs-on: ubuntu-latest
     outputs:
-      tf-modules: ${{ steps.collect-modules.outputs.tf-modules }}
+      tf-modules: ${{ steps.meta.outputs.tf-modules }}
+      tf-examples: ${{ steps.meta.outputs.tf-examples }}
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: ./.github/actions/collect-modules
-        id: collect-modules
+      - uses: ./.github/actions/collect-meta
+        id: meta
 
   typos:
     runs-on: ubuntu-latest
@@ -37,13 +37,11 @@ jobs:
 
   terraform-validate:
     runs-on: ubuntu-latest
+    needs: [meta]
 
     strategy:
       matrix:
-        project:
-          - asset-account/terraform/stack-set/examples/self-managed
-          - asset-account/terraform/stack-set/examples/service-managed
-          - connector/terraform/examples/basic
+        terraform_example: ${{fromJson(needs.meta.outputs.tf-modules)}}
 
     steps:
       - uses: actions/checkout@v4
@@ -54,19 +52,18 @@ jobs:
           terraform_wrapper: false
 
       - run: terraform init -input=false
-        working-directory: ${{ matrix.project }}
+        working-directory: ${{ matrix.terraform_example }}
 
       - run: terraform validate
-        working-directory: ${{ matrix.project }}
+        working-directory: ${{ matrix.terraform_example }}
 
   terraform-docs:
     runs-on: ubuntu-latest
-    needs:
-      - collect-modules
+    needs: [meta]
 
     strategy:
       matrix:
-        terraform_module: ${{fromJson(needs.collect-modules.outputs.tf-modules)}}
+        terraform_module: ${{fromJson(needs.meta.outputs.tf-modules)}}
 
     steps:
       - uses: actions/checkout@v4
@@ -129,3 +126,21 @@ jobs:
           cache: "npm"
       - run: npm ci --ignore-scripts
       - run: npx prettier --check .
+
+  codegen-freshness:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci --ignore-scripts
+      - run: cd codegen && npm ci --ignore-scripts
+      - run: npm run codegen
+
+      - run: >-
+          git diff --exit-code --color=always || ( echo "Generated code is
+          out-of-date. See the diff above." && exit 1 )
