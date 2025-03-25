@@ -1,5 +1,5 @@
 {
-  "Description": "Allows Elastio to scan AWS Backup EC2 recovery points.",
+  "Description": "Allows Elastio to scan AWS Backup EC2 and EBS recovery points.",
   "PolicyDocument": {
     "Version": "2012-10-17",
     "Statement": [
