@@ -1,8 +1,6 @@
 module "elastio_asset_account" {
   source = "../../"
 
-  stack_name = "ElastioAssetAccount2"
-
   template_url     = var.template_url
   encrypt_with_cmk = true
   iam_role_arn     = time_sleep.iam.triggers.deployer_role_arn
