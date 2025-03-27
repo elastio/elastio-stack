@@ -38,17 +38,17 @@ resource "aws_iam_role" "admin" {
           "Principal" : {
             "Service" : "cloudformation.amazonaws.com"
           },
-          "Action" : "sts:AssumeRole"
+          "Action" : "sts:AssumeRole",
+          "Condition" : {
+            "StringEquals" : {
+              "aws:SourceAccount" : local.admin_account_id
+            },
+            "StringLike" : {
+              "aws:SourceArn" : "arn:aws:cloudformation:*:${local.admin_account_id}:stackset/*"
+            }
+          }
         }
       ],
-      "Condition" : {
-        "StringEquals" : {
-          "aws:SourceAccount" : local.admin_account_id
-        },
-        "StringLike" : {
-          "aws:SourceArn" : "arn:aws:cloudformation:*:${local.admin_account_id}:stackset/*"
-        }
-      }
     }
   )
 }
