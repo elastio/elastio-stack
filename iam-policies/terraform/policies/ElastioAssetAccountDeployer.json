@@ -4,7 +4,7 @@
     "Version": "2012-10-17",
     "Statement": [
       {
-        "Action": ["lambda:*", "cloudformation:*", "logs:*", "ssm:*"],
+        "Action": ["lambda:*", "cloudformation:*", "logs:*", "ssm:*", "kms:*"],
         "Resource": "*",
         "Effect": "Allow"
       },

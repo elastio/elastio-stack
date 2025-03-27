@@ -16,7 +16,7 @@ export default {
   description: "Permissions required to deploy the Elastio Asset Account stack",
   statements: [
     {
-      Action: ["lambda:*", "cloudformation:*", "logs:*", "ssm:*"],
+      Action: ["lambda:*", "cloudformation:*", "logs:*", "ssm:*", "kms:*"],
       Resource: "*",
     },
     {
