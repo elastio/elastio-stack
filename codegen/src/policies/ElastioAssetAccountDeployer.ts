@@ -101,5 +101,61 @@ export default {
       Action: "iam:PassRole",
       Resource: ["arn:*:iam::*:role/*Elastio*"],
     },
+
+    {
+      Sid: "ElastioKmsRead",
+      Action: [
+        "kms:DescribeKey",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:ListResourceTags",
+      ],
+      Resource: "*",
+    },
+
+    {
+      Sid: "ElastioKmsCreate",
+      Action: ["kms:CreateKey"],
+      Resource: "*",
+      Condition: iam.hasRequestTag("elastio:resource"),
+    },
+
+    {
+      Sid: "ElastioKmsWrite",
+      Action: [
+        "kms:PutKeyPolicy",
+        "kms:ScheduleKeyDeletion",
+        "kms:EnableKeyRotation",
+        "kms:DisableKeyRotation",
+
+        "kms:TagResource",
+        "kms:UntagResource",
+
+        // Data-level KMS operations are required for example to encrypt/decrypt
+        // lambda env vars for lambda deployed as part of the Asset Account stack.
+        "kms:Decrypt",
+        "kms:Encrypt",
+        "kms:GenerateDataKey",
+        "kms:CreateGrant",
+      ],
+      Resource: "*",
+      Condition: iam.hasResourceTag("elastio:resource"),
+    },
+
+    // For KMS aliases we need separate permissions for the alias resource
+    // restricting it with the `elastio-` prefix.
+    {
+      Action: ["kms:CreateAlias", "kms:DeleteAlias", "kms:UpdateAlias"],
+      Resource: [`arn:aws:kms:*:*:alias/elastio-*`],
+    },
+
+    // Aliases require the same permissions both on the alias resource and on
+    // the KMS key resource. This is separate statement to use a condition
+    // by `elastio:resource` tag.
+    {
+      Action: ["kms:CreateAlias", "kms:DeleteAlias", "kms:UpdateAlias"],
+      Resource: [`arn:aws:kms:*:*:key/*`],
+      Condition: iam.hasResourceTag("elastio:resource"),
+    },
   ],
 } satisfies iam.Policy;

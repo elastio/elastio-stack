@@ -78,6 +78,65 @@
         "Action": "iam:PassRole",
         "Resource": ["arn:*:iam::*:role/*Elastio*"],
         "Effect": "Allow"
+      },
+      {
+        "Sid": "ElastioKmsRead",
+        "Action": [
+          "kms:DescribeKey",
+          "kms:GetKeyPolicy",
+          "kms:GetKeyRotationStatus",
+          "kms:ListResourceTags"
+        ],
+        "Resource": "*",
+        "Effect": "Allow"
+      },
+      {
+        "Sid": "ElastioKmsCreate",
+        "Action": ["kms:CreateKey"],
+        "Resource": "*",
+        "Condition": {
+          "StringLike": {
+            "aws:RequestTag/elastio:resource": "*"
+          }
+        },
+        "Effect": "Allow"
+      },
+      {
+        "Sid": "ElastioKmsWrite",
+        "Action": [
+          "kms:PutKeyPolicy",
+          "kms:ScheduleKeyDeletion",
+          "kms:EnableKeyRotation",
+          "kms:DisableKeyRotation",
+          "kms:TagResource",
+          "kms:UntagResource",
+          "kms:Decrypt",
+          "kms:Encrypt",
+          "kms:GenerateDataKey",
+          "kms:CreateGrant"
+        ],
+        "Resource": "*",
+        "Condition": {
+          "StringLike": {
+            "aws:ResourceTag/elastio:resource": "*"
+          }
+        },
+        "Effect": "Allow"
+      },
+      {
+        "Action": ["kms:CreateAlias", "kms:DeleteAlias", "kms:UpdateAlias"],
+        "Resource": ["arn:aws:kms:*:*:alias/elastio-*"],
+        "Effect": "Allow"
+      },
+      {
+        "Action": ["kms:CreateAlias", "kms:DeleteAlias", "kms:UpdateAlias"],
+        "Resource": ["arn:aws:kms:*:*:key/*"],
+        "Condition": {
+          "StringLike": {
+            "aws:ResourceTag/elastio:resource": "*"
+          }
+        },
+        "Effect": "Allow"
       }
     ]
   }
