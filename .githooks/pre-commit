@@ -33,6 +33,13 @@ if command_exists typos; then
   echo "$files" | xargs typos
 fi
 
+if command_exists terraform; then
+  # `terraform fmt` doesn't ignore non-tf files automatically
+  tf_files=$(echo "$files" | { grep -E '\.tf$' || true; })
+
+  echo "$tf_files" | xargs terraform fmt
+fi
+
 if command_exists terraform-docs; then
   for tf_module in $tf_modules; do
     terraform-docs markdown "$tf_module" --output-file "README.md"
