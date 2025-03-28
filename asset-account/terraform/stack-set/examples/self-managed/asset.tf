@@ -1,20 +1,21 @@
 resource "aws_iam_role" "execution" {
   provider = aws.asset
 
-  name               = "AWSCloudFormationStackSetExecutionRole"
-  assume_role_policy = data.aws_iam_policy_document.execution_trust.json
-}
-
-data "aws_iam_policy_document" "execution_trust" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    effect  = "Allow"
-
-    principals {
-      identifiers = [aws_iam_role.admin.arn]
-      type        = "AWS"
+  name = "AWSCloudFormationStackSetExecutionRole"
+  assume_role_policy = jsonencode(
+    {
+      "Version" : "2012-10-17",
+      "Statement" : [
+        {
+          "Effect" : "Allow",
+          "Action" : ["sts:AssumeRole"],
+          "Principal" : {
+            "AWS" : aws_iam_role.admin.arn
+          }
+        }
+      ]
     }
-  }
+  )
 }
 
 # Specifies the set of permissions required for the deployment of the Cloudfomation stack

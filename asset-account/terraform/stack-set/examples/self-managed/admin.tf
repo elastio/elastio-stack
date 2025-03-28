@@ -25,47 +25,52 @@ module "elastio_asset_account" {
 resource "aws_iam_role" "admin" {
   provider = aws.admin
 
-  assume_role_policy = data.aws_iam_policy_document.admin_trust.json
-  name               = "AWSCloudFormationStackSetAdministrationRole"
-}
+  name = "AWSCloudFormationStackSetAdministrationRole"
 
-data "aws_iam_policy_document" "admin_trust" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    effect  = "Allow"
-
-    principals {
-      identifiers = ["cloudformation.amazonaws.com"]
-      type        = "Service"
+  # Allow assuming for CFN with some `Condition` elements to prevent the confused deputy attack
+  # as described in AWS docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-self-managed.html#confused-deputy-mitigation
+  assume_role_policy = jsonencode(
+    {
+      "Version" : "2012-10-17",
+      "Statement" : [
+        {
+          "Effect" : "Allow",
+          "Principal" : {
+            "Service" : "cloudformation.amazonaws.com"
+          },
+          "Action" : "sts:AssumeRole",
+          "Condition" : {
+            "StringEquals" : {
+              "aws:SourceAccount" : local.admin_account_id
+            },
+            "StringLike" : {
+              "aws:SourceArn" : "arn:aws:cloudformation:*:${local.admin_account_id}:stackset/*"
+            }
+          }
+        }
+      ],
     }
-
-    # Conditions to prevent the confused deputy attack
-    condition {
-      test     = "StringEquals"
-      variable = "aws:SourceAccount"
-      values   = [local.admin_account_id]
-    }
-
-    condition {
-      test     = "StringLike"
-      variable = "aws:SourceArn"
-      values   = ["arn:aws:cloudformation:*:${local.admin_account_id}:stackset/*"]
-    }
-  }
-}
-
-data "aws_iam_policy_document" "admin_execution" {
-  statement {
-    actions   = ["sts:AssumeRole"]
-    effect    = "Allow"
-    resources = ["arn:aws:iam::*:role/AWSCloudFormationStackSetExecutionRole"]
-  }
+  )
 }
 
 resource "aws_iam_role_policy" "admin_execution" {
   provider = aws.admin
 
-  name   = "AssumeExecutionRole"
-  policy = data.aws_iam_policy_document.admin_execution.json
-  role   = aws_iam_role.admin.name
+  name = "AssumeExecutionRole"
+  role = aws_iam_role.admin.name
+
+  # Allow assuming the execution role in any (*) account to avoid coupling the
+  # target accounts with assets with this policy.
+  policy = jsonencode(
+    {
+      "Version" : "2012-10-17",
+      "Statement" : [
+        {
+          "Effect" : "Allow",
+          "Action" : "sts:AssumeRole",
+          "Resource" : "arn:aws:iam::*:role/AWSCloudFormationStackSetExecutionRole"
+        }
+      ]
+    }
+  )
 }
