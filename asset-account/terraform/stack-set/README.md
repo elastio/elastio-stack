@@ -16,7 +16,7 @@ See the `examples` directory for some examples of how this module can be used:
 ```tf
 module "elastio_asset_account" {
   source  = "terraform.cloudsmith.io/public/elastio-asset-account-stack-set/aws"
-  version = "0.33.0"
+  version = "0.33.1"
 
   // Provide input parameters
 }
