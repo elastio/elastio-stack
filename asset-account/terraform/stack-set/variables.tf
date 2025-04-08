@@ -16,17 +16,20 @@ variable "template_url" {
   nullable  = false
 }
 
-variable "accounts" {
-  description = <<-DESCR
-    The IDs AWS accounts where you want to create stack instances.
+# Temporarily disabled to prevent the users from the footgun of this bug
+# in Terraform AWS provider: https://github.com/hashicorp/terraform-provider-aws/issues/42172
+#
+# variable "accounts" {
+#   description = <<-DESCR
+#     The IDs AWS accounts where you want to create stack instances.
 
-    Specify `accounts` only if you are using `SELF_MANAGED` permissions model.
-    If you are using the `SERVICE_MANAGED` permissions model specify `deployment_targets` instead.
-  DESCR
+#     Specify `accounts` only if you are using `SELF_MANAGED` permissions model.
+#     If you are using the `SERVICE_MANAGED` permissions model specify `deployment_targets` instead.
+#   DESCR
 
-  type    = list(string)
-  default = null
-}
+#   type    = list(string)
+#   default = null
+# }
 
 variable "deployment_targets" {
   description = <<-DESCR
@@ -83,16 +86,16 @@ variable "auto_deployment" {
 
 variable "stack_set_name" {
   description = "The name of the CloudFormation StackSet."
-  type     = string
-  nullable = false
-  default  = "ElastioAssetAccount"
+  type        = string
+  nullable    = false
+  default     = "ElastioAssetAccount"
 }
 
 variable "stack_set_description" {
   description = "The description of the CloudFormation StackSet."
-  type     = string
-  nullable = false
-  default  = <<-DESCR
+  type        = string
+  nullable    = false
+  default     = <<-DESCR
     Elastio Asset Account StackSet creates IAM roles to link the AWS accounts with
     the Elastio Connector. This allows the Elastio Connector to scan the assets
     available in the account where the Elastio Asset Account stack instances are

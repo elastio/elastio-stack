@@ -60,8 +60,12 @@ resource "aws_cloudformation_stack_set" "this" {
 resource "aws_cloudformation_stack_instances" "this" {
   stack_set_name = aws_cloudformation_stack_set.this.name
 
-  accounts = var.accounts
-  regions  = [var.stack_instances_region]
+  # Temporarily disabled to prevent the users from the footgun of this bug
+  # in Terraform AWS provider: https://github.com/hashicorp/terraform-provider-aws/issues/42172
+  #
+  # accounts = var.accounts
+
+  regions = [var.stack_instances_region]
 
   dynamic "deployment_targets" {
     for_each = var.deployment_targets[*]

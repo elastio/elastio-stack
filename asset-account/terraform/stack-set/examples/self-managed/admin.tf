@@ -16,7 +16,9 @@ module "elastio_asset_account" {
   template_url = var.template_url
 
   # We are deploying just into a single asset account in this example
-  accounts = [local.asset_account_id]
+  deployment_targets = {
+    accounts = [local.asset_account_id]
+  }
 
   administration_role_arn = aws_iam_role.admin.arn
 }
