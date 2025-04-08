@@ -9,7 +9,7 @@ export interface Policy {
   statements: PolicyStatement[];
 }
 
-interface PolicyStatement {
+export interface PolicyStatement {
   /**
    * If not specified then `Allow` is assumed.
    */
@@ -37,12 +37,16 @@ type Principal =
       Service: string | string[];
     };
 
-type Action =
+export type Action =
   | `${string}:*`
   | `${iam.AwsBackupActions}`
+  | `${iam.AwsBatchActions}`
   | `${iam.AwsCloudformationActions}`
+  | `${iam.AwsDrsActions}`
   | `${iam.AwsEbsActions}`
   | `${iam.AwsEc2Actions}`
+  | `${iam.AwsElasticfilesystemActions}`
+  | `${iam.AwsFsxActions}`
   | `${iam.AwsIamActions}`
   | `${iam.AwsKmsActions}`
   | `${iam.AwsLambdaActions}`

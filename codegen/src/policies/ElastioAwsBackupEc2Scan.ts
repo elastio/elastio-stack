@@ -1,4 +1,4 @@
-import * as iam from "../iam";
+import * as iam from "../common/iam";
 
 export default {
   description: "Allows Elastio to scan AWS Backup EC2 and EBS recovery points.",

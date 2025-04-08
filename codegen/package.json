@@ -4,11 +4,12 @@
     "start": "tsc --noEmit && tsx ./src/main.ts"
   },
   "devDependencies": {
-    "@types/node": "^22.13.13",
+    "@types/node": "^22.13.14",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   },
   "dependencies": {
-    "aws-iam-policy-types": "^1.0.2"
+    "aws-iam-policy-types": "^1.0.2",
+    "lodash": "^4.17.21"
   }
 }

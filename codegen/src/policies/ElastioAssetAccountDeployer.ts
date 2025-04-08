@@ -1,4 +1,4 @@
-import * as iam from "../iam";
+import * as iam from "../common/iam";
 
 /**
  * Use the following command to discover what resource types are deployed by
