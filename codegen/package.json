@@ -4,12 +4,19 @@
     "start": "tsc --noEmit && tsx ./src/main.ts"
   },
   "devDependencies": {
-    "@types/node": "^22.13.14",
+    "@types/lodash": "^4.17.16",
+    "@types/node": "^22.14.0",
     "tsx": "^4.19.3",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@cdktf/hcl-tools": "^0.20.11",
+    "arktype": "^2.1.19",
+    "aws-cdk-lib": "^2.189.0",
     "aws-iam-policy-types": "^1.0.2",
-    "lodash": "^4.17.21"
+    "constructs": "^10.4.2",
+    "fs-extra": "^11.3.0",
+    "lodash": "^4.17.21",
+    "prettier": "^3.5.3"
   }
 }

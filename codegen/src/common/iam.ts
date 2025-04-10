@@ -9,23 +9,23 @@ export interface Policy {
   statements: PolicyStatement[];
 }
 
-export interface PolicyStatement {
+export type PolicyStatement = {
   /**
    * If not specified then `Allow` is assumed.
    */
   Effect?: "Deny";
   Action: Action | Action[];
-  Principal?: Principal;
-  Resource: string | string[];
   Condition?: Record<string, any>;
+  Principal?: Principal;
+  Resource?: string | string[];
 
   /**
    * Statement ID usually used as a description of the statement.
    */
   Sid?: string;
-}
+};
 
-type Principal =
+export type Principal =
   | "*"
   | {
       AWS: string | string[];
@@ -46,13 +46,16 @@ export type Action =
   | `${iam.AwsEbsActions}`
   | `${iam.AwsEc2Actions}`
   | `${iam.AwsElasticfilesystemActions}`
+  | `${iam.AwsEventsActions}`
   | `${iam.AwsFsxActions}`
   | `${iam.AwsIamActions}`
   | `${iam.AwsKmsActions}`
   | `${iam.AwsLambdaActions}`
   | `${iam.AwsLogsActions}`
   | `${iam.AwsS3Actions}`
-  | `${iam.AwsSsmActions}`;
+  | `${iam.AwsSqsActions}`
+  | `${iam.AwsSsmActions}`
+  | `${iam.AwsStsActions}`;
 
 type KnownTag =
   // A simple tag that customers can add to their resource for Elastio to
