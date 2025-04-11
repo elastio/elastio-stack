@@ -1,6 +1,6 @@
 # `elastio-nat-provision` module
 
-Creates an AWS Cloudformation stack named `elastio-nat-provision-lambda` which deploys NAT gateways in the private subnets where Elastio scan job workers run. This is necessary only if you deploy Elastio into private subnets that don't have outbound Internet access already. Alternatively, you can deploy your own NAT gateway if you want to.
+Creates an AWS CloudFormation stack named `elastio-nat-provision-lambda` which deploys NAT gateways in the private subnets where Elastio scan job workers run. This is necessary only if you deploy Elastio into private subnets that don't have outbound Internet access already. Alternatively, you can deploy your own NAT gateway if you want to.
 
 See the [`elastio-connector` module implementation](../../main.tf) for an example of how this module should be used.
 

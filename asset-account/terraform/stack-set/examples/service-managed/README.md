@@ -1,6 +1,6 @@
 # Service-Managed StackSet Example
 
-This is a basic example of using the `elastio-asset-account-stack-set` terraform module with the service-managed AWS Cloudformation StackSet.
+This is a basic example of using the `elastio-asset-account-stack-set` terraform module with the service-managed AWS CloudFormation StackSet.
 
 You'll need to deploy it from the AWS Management account. You'll also need to specify both the input variables: `accounts` and `organizational_unit_ids`.
 
