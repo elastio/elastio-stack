@@ -71,7 +71,7 @@ const CommonParams = type({
   }).optional(),
 });
 
-export const CloudformationParams = CommonParams.merge({
+export const CloudFormationParams = CommonParams.merge({
   orchestrator: "'cloudformation'",
 
   disableDeploymentNotification: type("boolean")

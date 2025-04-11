@@ -39,7 +39,7 @@ export function resources(inputs: Params): Record<string, Resource> {
     asset_region_stack_deployer: {
       type: "aws_iam_role",
       name: "ElastioAssetRegionStackDeployer",
-      description: "Used by Cloudformation to deploy region-level stack",
+      description: "Used by CloudFormation to deploy region-level stack",
       assumeRolePolicy: {
         Action: "sts:AssumeRole",
         Principal: {
