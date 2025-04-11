@@ -58,10 +58,8 @@ if command_exists ./node_modules/.bin/prettier; then
   echo "$files" | xargs ./node_modules/.bin/prettier --ignore-unknown --write
 fi
 
-if command_exists tflint; then
-  tflint --init
-  echo "$files" | xargs -I {} tflint --config "$(pwd)/.tflint.hcl" --color --filter={}
-fi
+# We don't have `tflint` in pre-commit hook because it doesn't ignore files
+# ignored in `.gitignore`. More details: https://github.com/terraform-linters/tflint/issues/2283
 
 # Add the modified/prettified files to staging
 echo "$files" | xargs git add
