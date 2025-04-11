@@ -1,10 +1,10 @@
 import * as iam from "../../common/iam";
 import * as inventory from "../../common/inventory";
-import { Inputs } from "../inputs";
+import type { Params } from ".";
 import _ from "lodash";
 import { IamRole } from "./resource";
 
-export function cloudConnectorRole(inputs: Inputs): IamRole {
+export function cloudConnectorRole(params: Params): IamRole {
   const otherStatements: Record<string, iam.PolicyStatement[]> = {
     WriteEc2: [
       // Create and copy snapshots to the cloud connector account
@@ -41,7 +41,7 @@ export function cloudConnectorRole(inputs: Inputs): IamRole {
         Condition: {
           // Needed to add createVolumePermission for the connector account.
           StringEquals: {
-            "ec2:Add/userId": inputs.connectorAccountId,
+            "ec2:Add/userId": params.connectorAccountId,
             // Even though EC2 IAM reference says there are two more
             // things that could be used in the condition:
             // "ec2:Attribute" and "ec2:Attribute/${AttributeName}",
@@ -239,15 +239,15 @@ export function cloudConnectorRole(inputs: Inputs): IamRole {
 
       Principal: {
         AWS:
-          `arn:aws:iam::${inputs.connectorAccountId}:role/` +
-          inputs.iamResourceNamesPrefix +
+          `arn:aws:iam::${params.connectorAccountId}:role/` +
+          params.iamResourceNamesPrefix +
           "ElastioCloudConnectorBastion" +
-          inputs.iamResourceNamesSuffix,
+          params.iamResourceNamesSuffix,
       },
 
       Condition: {
         StringEquals: {
-          "sts:ExternalId": inputs.connectorRoleExternalId,
+          "sts:ExternalId": params.connectorRoleExternalId,
         },
       },
     },

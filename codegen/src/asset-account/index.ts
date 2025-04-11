@@ -1,23 +1,38 @@
 import { ArkErrors } from "arktype";
-import { inputs, InputsIn } from "./inputs";
+import { CloudFormationParams, TerraformParams } from "./params";
 import * as mir from "./mir";
-import * as tf from "./orchestrator/terraform";
+import * as terraform from "./orchestrator/terraform";
+import * as cloudformation from "./orchestrator/cloudformation";
 
-export { inputs };
+export type CloudFormationParams = typeof CloudFormationParams.inferIn;
+export type TerraformParams = typeof TerraformParams.inferIn;
 
-export function generate(inputsIn: InputsIn) {
-  const result = inputs(inputsIn);
-
-  if (result instanceof ArkErrors) {
-    throw new Error(`Invalid inputs: ${result}`);
-  }
-
-  const resources = mir.resources(result);
-
-  tf.generate(resources);
+export function generateCloudFormation(paramsIn: CloudFormationParams) {
+  const params = CloudFormationParams(paramsIn);
+  return generate(params, cloudformation.generate);
 }
 
-generate({
-  connectorAccountId: "123456789012",
-  connectorRoleExternalId: "external-id",
-});
+export function generateTerraform(paramsIn: TerraformParams) {
+  const params = TerraformParams(paramsIn);
+  return generate(params, terraform.generate);
+}
+
+type Generator<P extends mir.Params, R> = (
+  resources: Record<string, mir.Resource>,
+  params: P,
+) => R;
+
+function generate<P extends mir.Params, R, F extends Generator<P, R>>(
+  params: P | ArkErrors,
+  generator: F,
+): R {
+  if (params instanceof ArkErrors) {
+    throw new Error(`Invalid params: ${params}`);
+  }
+
+  const resources = mir.resources(params);
+
+  params.tags["elastio:resource"] = "true";
+
+  return generator(resources, params);
+}

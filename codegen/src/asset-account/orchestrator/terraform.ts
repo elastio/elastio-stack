@@ -1,11 +1,13 @@
-import type { Resource } from "../mir";
 import _ from "lodash";
 import * as hclTools from "@cdktf/hcl-tools";
 import * as iam from "../../common/iam";
 import * as prettier from "prettier";
+import { TerraformParams } from "../params";
+import { Resource } from "../mir";
 
 async function literal(value: unknown): Promise<string> {
   const json = JSON.stringify(value, null, 2);
+
   const pretty = await prettier.format(json, { parser: "json" });
   return pretty.trim();
 }
@@ -18,21 +20,35 @@ function policyDocument(statements: iam.PolicyStatement[]) {
   return {
     Version: "2012-10-17",
     Statement: statements.map((statement) => ({
-      ...statement,
       Effect: statement.Effect ?? "Allow",
+      ...statement,
     })),
   };
 }
 
-export async function generate(resources: Record<string, Resource>) {
-  const parts = [];
+export type TerraformParams = typeof TerraformParams.inferOut;
+
+export interface TerraformProject {
+  files: Record<string, string>;
+}
+
+export async function generate(
+  resources: Record<string, Resource>,
+  params: TerraformParams,
+): Promise<TerraformProject> {
+  const parts = [
+    `locals {
+      tags = ${await literal(params.tags)}
+    }`,
+  ];
 
   for (const [id, resource] of Object.entries(resources)) {
     switch (resource.type) {
       case "aws_iam_role": {
         parts.push(
-          `resource "aws_iam_role" "${id}" {
-            name = "${resource.name}"
+          `resource "aws_iam_role" ${literal(id)} {
+            name = ${literal(resource.name)}
+            tags = local.tags
             assume_role_policy = ${await jsonencode(policyDocument([resource.assumeRolePolicy]))}
           }`,
         );
@@ -49,7 +65,7 @@ export async function generate(resources: Record<string, Resource>) {
         );
 
         parts.push(
-          `resource "aws_iam_role_policy" "${id}" {
+          `resource "aws_iam_role_policy" ${literal(id)} {
             role = aws_iam_role.${id}.name
             name = each.key
             policy = jsonencode(
@@ -79,9 +95,13 @@ export async function generate(resources: Record<string, Resource>) {
     .replaceAll("{{account_id}}", "${local.account_id}")
     .replaceAll(/\{\{(.*)\}\}/g, "${$1}");
 
-  console.log(await hclTools.format(content));
-}
+  const formatted = (await hclTools.format(content)).trim();
 
-function camelCaseToSnakeCase(str: string): string {
-  return str.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase();
+  console.log(formatted);
+
+  return {
+    files: {
+      "main.tf": formatted,
+    },
+  };
 }

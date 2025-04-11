@@ -5,7 +5,7 @@ import * as iam from "./iam";
  * ElastioTenant (Connector Account) and CloudConnector (Asset Account) roles.
  */
 export const policy: Record<string, InventoryIamPolicyStatement[]> = {
-  ReadBackupInventory: [
+  ReadInventory: [
     {
       Action: [
         // Vaults
@@ -25,38 +25,17 @@ export const policy: Record<string, InventoryIamPolicyStatement[]> = {
         // may come in handy in the future?
         "backup:ListProtectedResources",
         "backup:ListProtectedResourcesByBackupVault",
-      ],
-      Resource: "*",
-    },
-  ],
 
-  ReadEfsInventory: [
-    {
-      Action: [
         "elasticfilesystem:DescribeFileSystems",
         "elasticfilesystem:ListTagsForResource",
         "elasticfilesystem:DescribeTags",
-      ],
-      Resource: "*",
-    },
-  ],
 
-  ReadFsxInventory: [
-    {
-      Action: [
         "fsx:DescribeVolumes",
         "fsx:DescribeBackups",
         "fsx:DescribeFileSystems",
         "fsx:DescribeStorageVirtualMachines",
         "fsx:ListTagsForResource",
-      ],
-      Resource: "*",
-    },
-  ],
 
-  ReadEbsInventory: [
-    {
-      Action: [
         // Volumes
         "ec2:DescribeVolumeStatus",
         "ec2:DescribeVolumes",
@@ -71,26 +50,12 @@ export const policy: Record<string, InventoryIamPolicyStatement[]> = {
         // Used for cost estimation
         "ebs:ListSnapshotBlocks",
         "ebs:ListChangedBlocks",
-      ],
-      Resource: "*",
-    },
-  ],
 
-  ReadEc2Inventory: [
-    {
-      Action: [
         "ec2:DescribeInstances",
         "ec2:DescribeImages",
         "ec2:DescribeHosts",
         "ssm:DescribeInstanceInformation",
-      ],
-      Resource: "*",
-    },
-  ],
 
-  ReadVpcInventory: [
-    {
-      Action: [
         // Used for network config troubleshooting
         "ec2:DescribeAvailabilityZones",
         "ec2:DescribeSecurityGroups",
@@ -99,14 +64,7 @@ export const policy: Record<string, InventoryIamPolicyStatement[]> = {
         "ec2:DescribeRouteTables",
         "ec2:DescribeNatGateways",
         "ec2:DescribeVpcEndpoints",
-      ],
-      Resource: "*",
-    },
-  ],
 
-  ReadS3Inventory: [
-    {
-      Action: [
         "s3:ListAllMyBuckets",
         "s3:GetBucketLocation",
         "s3:GetBucketTagging",
@@ -116,28 +74,11 @@ export const policy: Record<string, InventoryIamPolicyStatement[]> = {
         "s3:GetBucketPolicy",
         "s3:GetBucketLogging",
         "s3:ListBucket",
-      ],
-      Resource: "*",
-    },
-  ],
 
-  ReadAccountsInventory: [
-    {
-      Action: ["iam:ListAccountAliases", "ec2:DescribeRegions"],
-      Resource: "*",
-    },
-  ],
+        "iam:ListAccountAliases",
+        "ec2:DescribeRegions",
+        "kms:DescribeKey",
 
-  ReadKmsInventory: [
-    {
-      Action: ["kms:DescribeKey"],
-      Resource: "*",
-    },
-  ],
-
-  ReadCloudformationInventory: [
-    {
-      Action: [
         // Required for discovering Elastio CFN stack version by blue stack
         // Also used by used by the `accs` service to validate the status
         // of the asset account CFN stack in cross-account scenario (this policy
@@ -145,14 +86,7 @@ export const policy: Record<string, InventoryIamPolicyStatement[]> = {
         "cloudformation:DescribeStacks",
         "cloudformation:DescribeStackSet",
         "cloudformation:ListStacks",
-      ],
-      Resource: "*",
-    },
-  ],
 
-  ReadBatchInventory: [
-    {
-      Action: [
         // Just for debugging
         "batch:DescribeComputeEnvironments",
         "batch:DescribeJobDefinitions",
@@ -165,14 +99,7 @@ export const policy: Record<string, InventoryIamPolicyStatement[]> = {
         "batch:ListJobs",
         "batch:ListSchedulingPolicies",
         "batch:ListTagsForResource",
-      ],
-      Resource: "*",
-    },
-  ],
 
-  ReadDrsInventory: [
-    {
-      Action: [
         "drs:DescribeRecoverySnapshots",
         "drs:DescribeSourceServers",
         "drs:ListTagsForResource",

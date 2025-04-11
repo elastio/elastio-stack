@@ -1,12 +1,16 @@
 import type { Resource } from "./resource";
-import { Inputs } from "../inputs";
 import { cloudConnectorRole } from "./cloud-connector";
+import { CloudFormationParams, TerraformParams } from "../params";
 
 export { Resource };
 
+export type Params =
+  | typeof CloudFormationParams.inferOut
+  | typeof TerraformParams.inferOut;
+
 const version = "0.35.13";
 
-export function resources(inputs: Inputs): Record<string, Resource> {
+export function resources(inputs: Params): Record<string, Resource> {
   return {
     inventory_event_target: {
       type: "aws_iam_role",

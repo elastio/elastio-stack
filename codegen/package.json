@@ -17,6 +17,7 @@
     "constructs": "^10.4.2",
     "fs-extra": "^11.3.0",
     "lodash": "^4.17.21",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "yaml": "^2.7.1"
   }
 }

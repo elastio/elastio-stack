@@ -1,12 +1,9 @@
 import { type } from "arktype";
 import { collapse } from "../common/string";
 
-export type Inputs = typeof inputs.inferOut;
-export type InputsIn = typeof inputs.inferIn;
-
 const IamPolicyArn = type(/^arn:aws:iam::[^:]*:policy\/.*/);
 
-export const inputs = type({
+const CommonParams = type({
   connectorAccountId: type(/^\d{12}$/).configure({
     title: "Cloud connector AWS account ID",
     description: collapse`
@@ -25,6 +22,57 @@ export const inputs = type({
     `,
     actual: "",
   }),
+
+  tags: type({ "[string]": "string" })
+    .configure({
+      title: "Tags",
+      description: collapse`
+        Tags to add to all resources deployed by this stack.
+      `,
+    })
+    .default(() => ({})),
+
+  iamResourceNamesPrefix: type("string")
+    .configure({
+      title: "IAM resource names prefix",
+      description:
+        "Add a custom prefix to names of all IAM resources deployed by this stack",
+    })
+    .default(""),
+
+  iamResourceNamesSuffix: type("string")
+    .configure({
+      title: "IAM resource names suffix",
+      description:
+        "Add a custom suffix to names of all IAM resources deployed by this stack",
+    })
+    .default(""),
+
+  globalManagedPolicies: IamPolicyArn.array()
+    .configure({
+      title: "Global IAM managed policies ARNs",
+      description:
+        "IAM managed policies ARNs to attach to all Elastio IAM roles",
+    })
+    .narrow((list, ctx) => {
+      const unique = new Set(list);
+      return (
+        unique.size === list.length || ctx.mustBe("a list without diplicates")
+      );
+    })
+    .default(() => []),
+
+  globalPermissionBoundary: IamPolicyArn.configure({
+    title: "Global IAM permission boundary policy ARN",
+    description: collapse`
+      The ARN of the IAM managed policy to use as a
+      permission boundary for all Elastio IAM roles
+    `,
+  }).optional(),
+});
+
+export const CloudformationParams = CommonParams.merge({
+  orchestrator: "'cloudformation'",
 
   disableDeploymentNotification: type("boolean")
     .configure({
@@ -57,45 +105,6 @@ export const inputs = type({
     })
     .optional(),
 
-  iamResourceNamesPrefix: type("string")
-    .configure({
-      title: "IAM resource names prefix",
-      description:
-        "Add a custom prefix to names of all IAM resources deployed by this stack",
-    })
-    .default(""),
-
-  iamResourceNamesSuffix: type("string")
-    .configure({
-      title: "IAM resource names suffix",
-      description:
-        "Add a custom suffix to names of all IAM resources deployed by this stack",
-    })
-    .default(""),
-
-  globalManagedPolicies: IamPolicyArn.array()
-    .configure({
-      title: "Global IAM managed policies ARNs",
-      description:
-        "IAM managed policies ARNs to attach to all Elastio IAM roles",
-    })
-    .narrow((list, ctx) => {
-      const unique = new Set(list);
-      return (
-        unique.size === list.length ||
-        ctx.reject("list contains duplicate items")
-      );
-    })
-    .default(() => []),
-
-  globalPermissionBoundary: IamPolicyArn.configure({
-    title: "Global IAM permission boundary policy ARN",
-    description: collapse`
-      The ARN of the IAM managed policy to use as a
-      permission boundary for all Elastio IAM roles
-    `,
-  }).optional(),
-
   encryptWithCmk: type("boolean")
     .configure({
       title: "Encrypt data with customer-managed KMS keys",
@@ -119,4 +128,8 @@ export const inputs = type({
         "This increases the cost of the stack. Enable only if needed",
     })
     .default(false),
-});
+}).describe("Params specific to CloudFormation orchestrator");
+
+export const TerraformParams = CommonParams.describe(
+  "Params specific to Terraform orchestrator",
+);
