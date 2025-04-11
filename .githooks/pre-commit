@@ -60,7 +60,7 @@ fi
 
 if command_exists tflint; then
   tflint --init
-  tflint --config "$(pwd)/.tflint.hcl" --color --recursive
+  echo "$files" | xargs -I {} tflint --config "$(pwd)/.tflint.hcl" --color --filter={}
 fi
 
 # Add the modified/prettified files to staging
