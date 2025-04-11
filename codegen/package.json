@@ -12,7 +12,6 @@
   "dependencies": {
     "@cdktf/hcl-tools": "^0.20.11",
     "arktype": "^2.1.19",
-    "aws-cdk-lib": "^2.189.0",
     "aws-iam-policy-types": "^1.0.2",
     "constructs": "^10.4.2",
     "fs-extra": "^11.3.0",
