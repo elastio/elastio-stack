@@ -1,6 +1,6 @@
 # Self-Managed StackSet Example
 
-This is a basic example of using the `elastio-asset-account-stack-set` terraform module with the self-managed AWS Cloudformation StackSet.
+This is a basic example of using the `elastio-asset-account-stack-set` terraform module with the self-managed AWS CloudFormation StackSet.
 
 You can deploy it even within a single account. Just specify the `template_url` input variable at minimum.
 

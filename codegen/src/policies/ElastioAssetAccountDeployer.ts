@@ -79,7 +79,7 @@ export default {
       Sid: "ElastioIamDelete",
       Action: ["iam:DeleteRole", "iam:DeletePolicy"],
 
-      // A name wildcard is required here because if Cloudformation tries to delete
+      // A name wildcard is required here because if CloudFormation tries to delete
       // a non-existing resource with a Condition based on `elastio:resource` tag,
       // then it'll get a 403 AccessDenied error which it doesn't handle properly.
       // It stops the stack deletion process in a DELETE_FAILED state:
