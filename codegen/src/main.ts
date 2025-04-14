@@ -16,6 +16,7 @@ const scriptDir = path.dirname(scriptPath);
 const iamPoliciesTfModulePath = path.join(
   path.join(scriptDir, "../../iam-policies/terraform"),
 );
+const iamPoliciesOutDir = path.join(iamPoliciesTfModulePath, "policies");
 
 async function writePolicy(policyName: string, policy: Policy) {
   const policyDocument = {
@@ -33,11 +34,7 @@ async function writePolicy(policyName: string, policy: Policy) {
 
   const policyDocumentJson = JSON.stringify(policyDefinition, null, 2);
 
-  const policyOutputPath = path.join(
-    iamPoliciesTfModulePath,
-    "policies",
-    `${policyName}.json`,
-  );
+  const policyOutputPath = path.join(iamPoliciesOutDir, `${policyName}.json`);
 
   await fs.writeFile(policyOutputPath, policyDocumentJson);
 }
@@ -46,6 +43,9 @@ async function main() {
   const policiesDir = path.join(scriptDir, "policies");
   const policyFiles = await fs.readdir(policiesDir);
   const policyNames = policyFiles.map((file) => path.basename(file, ".ts"));
+
+  await fs.rm(iamPoliciesOutDir, { recursive: true, force: true });
+  await fs.mkdir(iamPoliciesOutDir, { recursive: true });
 
   const policies = await Promise.all(
     policyNames.map(async (policyName) => {

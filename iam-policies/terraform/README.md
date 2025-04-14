@@ -30,10 +30,8 @@ See the basic [usage example](./examples/basic/main.tf).
 | Policy                                                       | Description                                                    |
 | ------------------------------------------------------------ | -------------------------------------------------------------- |
 | [`ElastioAssetAccountDeployer`][ElastioAssetAccountDeployer] | Permissions required to deploy the Elastio Asset Account stack |
-| [`ElastioAwsBackupEc2Scan`][ElastioAwsBackupEc2Scan]         | Allows Elastio to scan AWS Backup EC2 and EBS recovery points. |
 
 [ElastioAssetAccountDeployer]: ../../codegen/src/policies/ElastioAssetAccountDeployer.ts
-[ElastioAwsBackupEc2Scan]: ../../codegen/src/policies/ElastioAwsBackupEc2Scan.ts
 
 <!-- ELASTIO_END_POLICY_NAMES -->
 
