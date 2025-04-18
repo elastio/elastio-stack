@@ -86,7 +86,7 @@ cent_fedora_install()
     done
 
     rpm --import https://$repo_host/GPG-KEY-elastio
-    yum localinstall -y $repo_package_url
+    yum install -y $repo_package_url
     which dnf >/dev/null 2>&1 &&
         cent8_fedora_install $1 $2 $3 ||
         cent7_amazon_install $1 $2 $3
@@ -331,7 +331,7 @@ case ${dist_name} in
 
     fedora | fc )
         case ${dist_ver}-$(uname -m) in
-            39-* | 40-* ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
+            40-* | 41-* | 42-* ) cent_fedora_install Fedora $(rpm -E %fedora) fc ;;
             * )
                 echo "Only Fedora versions 39 and 40 are supported. Current distro version $dist_ver isn't supported."
                 exit 1
