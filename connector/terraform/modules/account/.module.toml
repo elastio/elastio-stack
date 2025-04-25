@@ -2,4 +2,4 @@
 name = "aws-elastio-connector-account"
 description = "Terraform module for creating the Elastio Connector Account stack"
 type = "terraform"
-version = "0.33.1"
+version = "0.33.2"

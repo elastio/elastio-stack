@@ -11,7 +11,7 @@ See the [`elastio-connector` module implementation](../../main.tf) for an exampl
 ```tf
 module "elastio_connector_account" {
   source  = "terraform.cloudsmith.io/public/elastio-conenctor-account/aws"
-  version = "0.33.1"
+  version = "0.33.2"
 
   // Provide input parameters
 }

@@ -11,7 +11,7 @@ See the [`elastio-connector` module implementation](../../main.tf) for an exampl
 ```tf
 module "elastio_nat_provision" {
   source  = "terraform.cloudsmith.io/public/elastio-nat-provision/aws"
-  version = "0.33.1"
+  version = "0.33.2"
 
   // Provide input parameters
 }
