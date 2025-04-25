@@ -13,7 +13,7 @@ See the basic [usage example](./examples/basic/main.tf).
 ```tf
 module "elastio_asset_account" {
   source  = "terraform.cloudsmith.io/public/elastio-asset-account-cloudformation-stack/aws"
-  version = "0.33.0"
+  version = "0.33.1"
 
   // Provide input parameters
 }

@@ -38,7 +38,7 @@ Here is the basic example usage of the module that deploys Elastio Connectors in
 ```tf
 module "elastio_connector" {
   source  = "terraform.cloudsmith.io/public/elastio-connector/aws"
-  version = "0.33.1"
+  version = "0.33.2"
 
   elastio_tenant = var.elastio_tenant
   elastio_pat    = var.elastio_pat
