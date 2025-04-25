@@ -41,7 +41,7 @@ See the basic [usage example](./examples/basic/main.tf).
 
 | Name                                                                     | Version |
 | ------------------------------------------------------------------------ | ------- |
-| <a name="requirement_terraform"></a> [terraform](#requirement_terraform) | ~> 1.0  |
+| <a name="requirement_terraform"></a> [terraform](#requirement_terraform) | ~> 1.9  |
 | <a name="requirement_aws"></a> [aws](#requirement_aws)                   | ~> 5.0  |
 
 ## Providers
