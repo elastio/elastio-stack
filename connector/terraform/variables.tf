@@ -59,7 +59,7 @@ variable "network_configuration" {
   DESCR
 
   type     = string
-  default  = "Auto"
+  default  = "Manual"
   nullable = false
 
   validation {
