@@ -4,6 +4,8 @@ module "elastio_connectors" {
   elastio_tenant = var.elastio_tenant
   elastio_pat    = var.elastio_pat
 
+  network_configuration = "Auto"
+
   elastio_cloud_connectors = [
     {
       region = "us-east-1"
