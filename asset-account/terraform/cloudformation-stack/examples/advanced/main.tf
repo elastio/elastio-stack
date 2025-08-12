@@ -1,9 +1,8 @@
 module "elastio_asset_account" {
   source = "../../"
 
-  template_url     = var.template_url
-  encrypt_with_cmk = true
-  iam_role_arn     = time_sleep.iam.triggers.deployer_role_arn
+  template_url = var.template_url
+  iam_role_arn = time_sleep.iam.triggers.deployer_role_arn
 }
 
 resource "aws_iam_role" "deployer" {

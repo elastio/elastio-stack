@@ -12,14 +12,4 @@ resource "aws_cloudformation_stack" "this" {
   policy_url         = var.policy_url
   iam_role_arn       = var.iam_role_arn
   timeout_in_minutes = var.timeout_in_minutes
-
-  parameters = {
-    for key, value in {
-      iamResourceNamesPrefix = var.iam_resource_names_prefix
-      iamResourceNamesSuffix = var.iam_resource_names_suffix
-      encryptWithCmk         = var.encrypt_with_cmk
-      lambdaTracing          = var.lambda_tracing
-    } :
-    key => tostring(value)
-  }
 }
