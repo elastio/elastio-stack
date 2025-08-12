@@ -31,9 +31,9 @@ variable "tags" {
 
 variable "stack_name" {
   description = "The name of the CloudFormation StackSet."
-  type     = string
-  nullable = false
-  default  = "ElastioAssetAccount"
+  type        = string
+  nullable    = false
+  default     = "ElastioAssetAccount"
 }
 
 variable "disable_rollback" {
@@ -83,50 +83,4 @@ variable "timeout_in_minutes" {
 
   type    = number
   default = null
-}
-
-#####################################################
-## Optional parameters of the CloudFormation stack ##
-#####################################################
-
-variable "iam_resource_names_prefix" {
-  description = <<-DESCR
-    Add a custom prefix to names of all IAM resources deployed by this stack.
-  DESCR
-
-  type     = string
-  nullable = false
-  default  = ""
-}
-
-variable "iam_resource_names_suffix" {
-  description = <<-DESCR
-    Add a custom prefix to names of all IAM resources deployed by this stack.
-  DESCR
-
-  type     = string
-  nullable = false
-  default  = ""
-}
-
-variable "encrypt_with_cmk" {
-  description = <<-DESCR
-    Provision an additional customer-managed KMS key to encrypt Lambda environment variables.
-    This increases the cost of the stack.
-  DESCR
-
-  type     = bool
-  nullable = false
-  default  = false
-}
-
-variable "lambda_tracing" {
-  description = <<-DESCR
-    Enable AWS X-Ray tracing for Lambda functions.
-    This increases the cost of the stack.
-  DESCR
-
-  type     = bool
-  nullable = false
-  default  = false
 }

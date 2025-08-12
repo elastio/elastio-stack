@@ -1,5 +1,6 @@
 [module]
-name = "aws-elastio-asset-account-cloudformation-stack"
+name    = "aws-elastio-asset-account-cloudformation-stack"
+version = "1.0.0"
+
 description = "Terraform module for creating the Elastio Asset Account CloudFormation stack"
-type = "terraform"
-version = "0.33.1"
+type        = "terraform"
