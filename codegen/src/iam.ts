@@ -53,7 +53,7 @@ type Action =
 type KnownTag =
   // A simple tag that customers can add to their resource for Elastio to
   // get access to it. It's first use case at the time of this writing is
-  // autorizing Elastio access to KMS keys customers use to encrypt their data.
+  // authorizing Elastio access to KMS keys customers use to encrypt their data.
   //
   // This tag can currently be set to a value like an empty string or `true`.
   // However, we may reserve the right to endow special values for this tag
