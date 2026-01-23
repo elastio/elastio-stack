@@ -9,7 +9,7 @@ This Terraform module deploys additional Elastio IAM managed policies that you c
 ```tf
 module "elastio_policies" {
   source  = "terraform.cloudsmith.io/public/elastio-iam-policies/aws"
-  version = "0.33.3"
+  version = "0.34.0"
 
   // Provide input parameters
 }
@@ -42,13 +42,13 @@ See the basic [usage example](./examples/basic/main.tf).
 | Name                                                                     | Version |
 | ------------------------------------------------------------------------ | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement_terraform) | ~> 1.9  |
-| <a name="requirement_aws"></a> [aws](#requirement_aws)                   | ~> 5.0  |
+| <a name="requirement_aws"></a> [aws](#requirement_aws)                   | >= 5.0  |
 
 ## Providers
 
 | Name                                             | Version |
 | ------------------------------------------------ | ------- |
-| <a name="provider_aws"></a> [aws](#provider_aws) | ~> 5.0  |
+| <a name="provider_aws"></a> [aws](#provider_aws) | >= 5.0  |
 
 ## Modules
 

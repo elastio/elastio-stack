@@ -31,7 +31,7 @@ cent7_amazon_install()
 {
     if [ ! -z "$driver" ]; then
         cent_fedora_kernel_devel_install $1
-        # Hack around zlib package updae on OL7 with versionlock in Oracle Cloud.
+        # Hack around zlib package update on OL7 with versionlock in Oracle Cloud.
         # dkms-elastio-snap depends on dkms. And dkms depends on zlib-1.2.7-21 which may be necessary to update.
         zlib_locked=0
         rpm -qa | grep -q versionlock && yum versionlock list | grep -q zlib && zlib_locked=1
@@ -113,7 +113,7 @@ deb_ubu_install()
         check_installed gnupg || apt-get install -y gnupg
     fi
 
-    # For Ubuntu 16.04 - 21.10 we are insatlling Debian packages:
+    # For Ubuntu 16.04 - 21.10 we are installing Debian packages:
     # Debian 9 for Ubuntu 18.XX, Debian 10 for Ubuntu 20.XX and 21.XX etc.
     # And Ubuntu 22.04 and newer have own repository.
     if [ "$dist_name" == "ubuntu" ] && [ "$dist_ver" -le 2110 ]; then
