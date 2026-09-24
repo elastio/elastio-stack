@@ -56,9 +56,9 @@ variable "security_group_ids" {
 }
 
 variable "image" {
-  description = "Agent image. The default is the agent release this module version was tested with. Pin a version; :latest moves."
+  description = "Agent image. The default is the agent release this module version was tested with. Pin a version; :latest moves. Needs 0.1.5 or later: older agents read only the QUELL_* variable names."
   type        = string
-  default     = "public.ecr.aws/elastio/elastio-database-monitoring-agent:0.1.4"
+  default     = "public.ecr.aws/elastio/elastio-database-monitoring-agent:0.1.5"
 }
 
 variable "assign_public_ip" {

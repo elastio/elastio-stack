@@ -7,7 +7,8 @@
 
 locals {
   # ECS names allow letters, digits, hyphens and underscores, up to 255. The
-  # product-facing name is passed to the agent untouched as QUELL_AGENT_NAME.
+  # product-facing name is passed to the agent untouched as
+  # ELASTIO_DBMON_AGENT_NAME.
   ecs_name = substr(replace(var.name, "/[^A-Za-z0-9_-]/", "-"), 0, 255)
 
   # A shortened form for name prefixes with tight length limits. An IAM role
@@ -23,8 +24,24 @@ locals {
   gid = 65532
 
   # The ledger directory inside the container. It is the agent image's own
-  # writable volume (owned by the nonroot user), so it must not change.
-  ledger_dir = "/var/lib/quell"
+  # writable volume (owned by the nonroot user) from 0.1.5, and the binary's
+  # default ledger path is beneath it. Only the mount point moves with it:
+  # the EFS access point's contents, the ledger and nothing else, are the
+  # same file under either path, because the path is also passed explicitly.
+  ledger_dir = "/var/lib/elastio-dbmon"
+
+  # Task size. The Fargate floor: one agent reads one database's stream and
+  # needs no more (measured in elastio/database-monitoring-agent bench/).
+  task_cpu    = 256
+  task_memory = 512
+
+  # The Go runtime's soft memory limit, 80% of the task. Go does not derive
+  # one from the container on its own, and without it a heap whose live size
+  # is half the task is allowed to double before it is collected. The agent
+  # derives the same number from its cgroup when this is unset; it is set
+  # here too because what Fargate exposes inside the container is not
+  # something to rely on.
+  gomemlimit = "${floor(local.task_memory * 0.8)}MiB"
 }
 
 resource "aws_ecs_cluster" "this" {
@@ -334,8 +351,8 @@ resource "aws_ecs_task_definition" "this" {
   family                   = local.ecs_name
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = 256
-  memory                   = 512
+  cpu                      = local.task_cpu
+  memory                   = local.task_memory
   execution_role_arn       = aws_iam_role.execution.arn
   task_role_arn            = aws_iam_role.task.arn
 
@@ -383,19 +400,23 @@ resource "aws_ecs_task_definition" "this" {
         },
       ]
 
-      # The QUELL_* names are the agent binary's configuration contract.
+      # The ELASTIO_DBMON_* names are the agent binary's configuration
+      # contract from 0.1.5. The agent still reads the QUELL_* names older
+      # deployments set, but an image older than 0.1.5 reads only those, so
+      # this module needs agent 0.1.5 or later.
       environment = [
-        { name = "QUELL_SERVER_URL", value = var.server_url },
-        { name = "QUELL_SLOT", value = var.slot },
-        { name = "QUELL_PUBLICATION", value = var.publication },
-        { name = "QUELL_AGENT_NAME", value = var.name },
-        { name = "QUELL_LEDGER_PATH", value = "${local.ledger_dir}/ledger" },
+        { name = "ELASTIO_DBMON_SERVER_URL", value = var.server_url },
+        { name = "ELASTIO_DBMON_SLOT", value = var.slot },
+        { name = "ELASTIO_DBMON_PUBLICATION", value = var.publication },
+        { name = "ELASTIO_DBMON_AGENT_NAME", value = var.name },
+        { name = "ELASTIO_DBMON_LEDGER_PATH", value = "${local.ledger_dir}/ledger" },
+        { name = "GOMEMLIMIT", value = local.gomemlimit },
       ]
 
       secrets = [
-        { name = "QUELL_API_KEY", valueFrom = aws_secretsmanager_secret.api_key.arn },
-        { name = "QUELL_DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
-        { name = "QUELL_HASH_SECRET", valueFrom = aws_secretsmanager_secret.hash_secret.arn },
+        { name = "ELASTIO_DBMON_API_KEY", valueFrom = aws_secretsmanager_secret.api_key.arn },
+        { name = "ELASTIO_DBMON_DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
+        { name = "ELASTIO_DBMON_HASH_SECRET", valueFrom = aws_secretsmanager_secret.hash_secret.arn },
       ]
 
       logConfiguration = {

@@ -71,8 +71,20 @@ run "same_az_two_subnets" {
     error_message = "the log driver must be given the module's region"
   }
   assert {
-    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "QUELL_HASH_SECRET")
-    error_message = "QUELL_HASH_SECRET must reach the container"
+    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "ELASTIO_DBMON_HASH_SECRET")
+    error_message = "ELASTIO_DBMON_HASH_SECRET must reach the container"
+  }
+  assert {
+    condition     = !strcontains(aws_ecs_task_definition.this.container_definitions, "QUELL_")
+    error_message = "the agent is configured by the ELASTIO_DBMON_* names, not the old QUELL_* ones"
+  }
+  assert {
+    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "\"name\":\"GOMEMLIMIT\",\"value\":\"409MiB\"")
+    error_message = "the Go memory limit must be 80% of the 512 MiB task"
+  }
+  assert {
+    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "\"containerPath\":\"/var/lib/elastio-dbmon\"") && strcontains(aws_ecs_task_definition.this.container_definitions, "\"value\":\"/var/lib/elastio-dbmon/ledger\"")
+    error_message = "the ledger must be mounted where the agent image keeps it, and named explicitly"
   }
   assert {
     condition     = aws_ecs_service.this.deployment_maximum_percent == 100 && aws_ecs_service.this.deployment_minimum_healthy_percent == 0
