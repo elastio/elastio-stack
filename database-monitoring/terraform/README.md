@@ -113,8 +113,8 @@ terraform init -backend=false && terraform test
 
 | Name                                                      | Version |
 | --------------------------------------------------------- | ------- |
-| <a name="provider_aws"></a> [aws](#provider_aws)          | 6.66.0  |
-| <a name="provider_random"></a> [random](#provider_random) | 3.9.1   |
+| <a name="provider_aws"></a> [aws](#provider_aws)          | >= 5.0  |
+| <a name="provider_random"></a> [random](#provider_random) | >= 3.0  |
 
 ## Modules
 
