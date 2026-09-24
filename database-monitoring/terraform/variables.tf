@@ -58,7 +58,34 @@ variable "security_group_ids" {
 variable "image" {
   description = "Agent image. The default is the agent release this module version was tested with. Pin a version; :latest moves. Needs 0.1.5 or later: older agents read only the QUELL_* variable names."
   type        = string
-  default     = "public.ecr.aws/elastio/elastio-database-monitoring-agent:0.1.5"
+  default     = "public.ecr.aws/elastio/elastio-database-monitoring-agent:0.1.6"
+}
+
+variable "task_cpu" {
+  description = "CPU units for the Fargate task: 256 (0.25 vCPU), 512, 1024 or 2048. Together with task_memory it must be a size Fargate runs on ARM64; see Sizing in the README."
+  type        = number
+  default     = 256
+
+  validation {
+    condition     = contains([256, 512, 1024, 2048], var.task_cpu)
+    error_message = "task_cpu must be 256, 512, 1024 or 2048."
+  }
+}
+
+variable "task_memory" {
+  description = "Memory for the Fargate task, in MiB. With task_cpu 256: 512, 1024 or 2048. With 512: 1024 to 4096. With 1024: 2048 to 8192. With 2048: 4096 to 16384. Above 512, in steps of 1024. The agent's Go memory limit, and the largest transaction it holds whole, follow it. Raise it when the Elastio UI says a transaction was too large for the agent to hold."
+  type        = number
+  default     = 512
+
+  validation {
+    condition = (
+      (var.task_cpu == 256 && contains([512, 1024, 2048], var.task_memory)) ||
+      (var.task_cpu == 512 && var.task_memory >= 1024 && var.task_memory <= 4096 && var.task_memory % 1024 == 0) ||
+      (var.task_cpu == 1024 && var.task_memory >= 2048 && var.task_memory <= 8192 && var.task_memory % 1024 == 0) ||
+      (var.task_cpu == 2048 && var.task_memory >= 4096 && var.task_memory <= 16384 && var.task_memory % 1024 == 0)
+    )
+    error_message = "task_cpu and task_memory must be a pair Fargate supports on ARM64: 256 with 512, 1024 or 2048; 512 with 1024 to 4096; 1024 with 2048 to 8192; 2048 with 4096 to 16384. Above 512 MiB, memory goes in steps of 1024."
+  }
 }
 
 variable "assign_public_ip" {

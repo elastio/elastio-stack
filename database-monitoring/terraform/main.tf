@@ -30,17 +30,23 @@ locals {
   # same file under either path, because the path is also passed explicitly.
   ledger_dir = "/var/lib/elastio-dbmon"
 
-  # Task size. The Fargate floor: one agent reads one database's stream and
-  # needs no more (measured in elastio/database-monitoring-agent bench/).
-  task_cpu    = 256
-  task_memory = 512
+  # Task size. The default is the Fargate floor: one agent reads one
+  # database's stream and needs no more for ordinary traffic (measured in
+  # elastio/database-monitoring-agent bench/). What a larger task buys is the
+  # size of the largest transaction the agent holds whole; past that it
+  # judges the transaction from its row counts and says so. See Sizing in the
+  # README.
+  task_cpu    = var.task_cpu
+  task_memory = var.task_memory
 
-  # The Go runtime's soft memory limit, 80% of the task. Go does not derive
-  # one from the container on its own, and without it a heap whose live size
-  # is half the task is allowed to double before it is collected. The agent
-  # derives the same number from its cgroup when this is unset; it is set
-  # here too because what Fargate exposes inside the container is not
-  # something to rely on.
+  # The Go runtime's soft memory limit, 80% of the task, and so the budget
+  # for one open transaction (30% of this). Go does not derive one from the
+  # container on its own, and without it a heap whose live size is half the
+  # task is allowed to double before it is collected. The agent derives the
+  # same number itself when this is unset (from 0.1.6 through the ECS task
+  # metadata, because a Fargate task's limit is on the task and the
+  # container's cgroup reads "max"); it is set here so the number in force
+  # is visible in the task definition.
   gomemlimit = "${floor(local.task_memory * 0.8)}MiB"
 }
 

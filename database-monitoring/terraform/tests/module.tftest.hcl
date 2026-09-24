@@ -135,9 +135,121 @@ run "names_and_image" {
     error_message = "secrets must be named elastio-dbmon/<name>/..."
   }
   assert {
-    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "public.ecr.aws/elastio/elastio-database-monitoring-agent:")
-    error_message = "the default image must be Elastio's public ECR image"
+    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "\"image\":\"public.ecr.aws/elastio/elastio-database-monitoring-agent:0.1.6\"")
+    error_message = "the default image must be Elastio's public ECR image of agent 0.1.6, the first to report oversized transactions and read its limit on Fargate"
   }
+}
+
+# The default is the smallest size, and the Go memory limit follows it.
+run "default_size" {
+  command = plan
+  assert {
+    condition     = aws_ecs_task_definition.this.cpu == "256" && aws_ecs_task_definition.this.memory == "512"
+    error_message = "the default task is 0.25 vCPU and 512 MiB"
+  }
+  assert {
+    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "\"name\":\"GOMEMLIMIT\",\"value\":\"409MiB\"")
+    error_message = "GOMEMLIMIT must be 80% of the 512 MiB task"
+  }
+}
+
+# Each size the product offers, and one between them: the task takes the
+# size, and GOMEMLIMIT is floor(task_memory * 0.8) MiB.
+run "size_medium" {
+  command = plan
+  variables {
+    task_cpu    = 512
+    task_memory = 1024
+  }
+  assert {
+    condition     = aws_ecs_task_definition.this.cpu == "512" && aws_ecs_task_definition.this.memory == "1024"
+    error_message = "medium is 512 CPU units and 1024 MiB"
+  }
+  assert {
+    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "\"name\":\"GOMEMLIMIT\",\"value\":\"819MiB\"")
+    error_message = "GOMEMLIMIT must be 819MiB for a 1024 MiB task"
+  }
+}
+
+run "size_large" {
+  command = plan
+  variables {
+    task_cpu    = 1024
+    task_memory = 2048
+  }
+  assert {
+    condition     = aws_ecs_task_definition.this.cpu == "1024" && aws_ecs_task_definition.this.memory == "2048"
+    error_message = "large is 1024 CPU units and 2048 MiB"
+  }
+  assert {
+    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "\"name\":\"GOMEMLIMIT\",\"value\":\"1638MiB\"")
+    error_message = "GOMEMLIMIT must be 1638MiB for a 2048 MiB task"
+  }
+}
+
+run "size_xlarge" {
+  command = plan
+  variables {
+    task_cpu    = 2048
+    task_memory = 4096
+  }
+  assert {
+    condition     = aws_ecs_task_definition.this.cpu == "2048" && aws_ecs_task_definition.this.memory == "4096"
+    error_message = "xlarge is 2048 CPU units and 4096 MiB"
+  }
+  assert {
+    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "\"name\":\"GOMEMLIMIT\",\"value\":\"3276MiB\"")
+    error_message = "GOMEMLIMIT must be 3276MiB for a 4096 MiB task"
+  }
+}
+
+run "size_between_presets" {
+  command = plan
+  variables {
+    task_cpu    = 512
+    task_memory = 3072
+  }
+  assert {
+    condition     = aws_ecs_task_definition.this.memory == "3072" && strcontains(aws_ecs_task_definition.this.container_definitions, "\"name\":\"GOMEMLIMIT\",\"value\":\"2457MiB\"")
+    error_message = "any pair Fargate runs is accepted, and GOMEMLIMIT follows it"
+  }
+}
+
+# Pairs Fargate does not run are refused at plan, not by ECS at apply.
+run "rejects_memory_too_large_for_cpu" {
+  command = plan
+  variables {
+    task_cpu    = 256
+    task_memory = 4096
+  }
+  expect_failures = [var.task_memory]
+}
+
+run "rejects_memory_too_small_for_cpu" {
+  command = plan
+  variables {
+    task_cpu    = 2048
+    task_memory = 2048
+  }
+  expect_failures = [var.task_memory]
+}
+
+run "rejects_memory_off_the_1024_step" {
+  command = plan
+  variables {
+    task_cpu    = 512
+    task_memory = 1536
+  }
+  expect_failures = [var.task_memory]
+}
+
+run "rejects_unknown_cpu" {
+  command = plan
+  variables {
+    task_cpu    = 4096
+    task_memory = 8192
+  }
+  expect_failures = [var.task_cpu]
 }
 
 run "ephemeral" {
