@@ -78,6 +78,21 @@ run "same_az_two_subnets" {
     condition     = aws_ecs_service.this.deployment_maximum_percent == 100 && aws_ecs_service.this.deployment_minimum_healthy_percent == 0
     error_message = "two tasks must never run against one ledger"
   }
+  assert {
+    condition     = jsondecode(aws_efs_file_system_policy.ledger[0].policy).Statement[0].Condition.StringEquals["elasticfilesystem:AccessPointArn"] == aws_efs_access_point.ledger[0].arn
+    error_message = "the file system policy must admit the task only through the access point"
+  }
+}
+
+run "rejects_empty_network" {
+  command = plan
+
+  variables {
+    subnet_ids         = []
+    security_group_ids = []
+  }
+
+  expect_failures = [var.subnet_ids, var.security_group_ids]
 }
 
 run "names_and_image" {
@@ -115,7 +130,7 @@ run "ephemeral" {
     persistent_ledger = false
   }
   assert {
-    condition     = length(aws_efs_file_system.ledger) == 0 && length(aws_efs_mount_target.ledger) == 0 && length(aws_security_group.efs) == 0
+    condition     = length(aws_efs_file_system.ledger) == 0 && length(aws_efs_mount_target.ledger) == 0 && length(aws_security_group.efs) == 0 && length(aws_efs_file_system_policy.ledger) == 0
     error_message = "persistent_ledger = false must create no EFS resources"
   }
   assert {

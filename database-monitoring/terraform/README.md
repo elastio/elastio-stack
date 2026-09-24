@@ -61,6 +61,7 @@ A security group with the usual allow-all egress already allows all three. The d
   - a security group `elastio-dbmon-<name>-efs-*` on the mount targets, which allows TCP 2049 only from `security_group_ids`;
   - an access point that maps every client to uid/gid 65532 and roots it at `/elastio-dbmon`, created with mode 0700;
   - a task-role policy that allows `elasticfilesystem:ClientMount` and `ClientWrite` on the file system, only through that access point.
+  - a file system policy that admits only the task role, only through that access point, and denies every client that does not use TLS.
 - A Fargate task definition: 0.25 vCPU, 0.5 GB, ARM64, with a read-only root filesystem. The task runs as the image's non-root user.
 - A service with `desired_count = 1`. Its deployment policy (minimum healthy 0%, maximum 100%) stops the old task before it starts the new one. A replication slot allows only one consumer at a time, and the ledger allows only one writer. Don't raise the maximum.
 
@@ -112,8 +113,8 @@ terraform init -backend=false && terraform test
 
 | Name                                                      | Version |
 | --------------------------------------------------------- | ------- |
-| <a name="provider_aws"></a> [aws](#provider_aws)          | >= 5.0  |
-| <a name="provider_random"></a> [random](#provider_random) | >= 3.0  |
+| <a name="provider_aws"></a> [aws](#provider_aws)          | 6.66.0  |
+| <a name="provider_random"></a> [random](#provider_random) | 3.9.1   |
 
 ## Modules
 
@@ -129,6 +130,7 @@ No modules.
 | [aws_ecs_task_definition.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_task_definition)                                   | resource    |
 | [aws_efs_access_point.ledger](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/efs_access_point)                                       | resource    |
 | [aws_efs_file_system.ledger](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/efs_file_system)                                         | resource    |
+| [aws_efs_file_system_policy.ledger](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/efs_file_system_policy)                           | resource    |
 | [aws_efs_mount_target.ledger](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/efs_mount_target)                                       | resource    |
 | [aws_iam_role.execution](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role)                                                    | resource    |
 | [aws_iam_role.task](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role)                                                         | resource    |

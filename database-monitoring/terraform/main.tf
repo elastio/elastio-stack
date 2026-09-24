@@ -282,6 +282,48 @@ resource "aws_iam_role_policy" "mount_ledger" {
   })
 }
 
+# Without a file system policy, EFS lets any NFS client that reaches a mount
+# target mount it as root. The security groups in `security_group_ids` may be
+# shared with other workloads, so the file system itself admits only the task
+# role, only through the access point, and only over TLS.
+
+resource "aws_efs_file_system_policy" "ledger" {
+  count = var.persistent_ledger ? 1 : 0
+
+  file_system_id = aws_efs_file_system.ledger[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AgentThroughAccessPoint"
+        Effect    = "Allow"
+        Principal = { AWS = aws_iam_role.task.arn }
+        Action = [
+          "elasticfilesystem:ClientMount",
+          "elasticfilesystem:ClientWrite",
+        ]
+        Resource = aws_efs_file_system.ledger[0].arn
+        Condition = {
+          StringEquals = {
+            "elasticfilesystem:AccessPointArn" = aws_efs_access_point.ledger[0].arn
+          }
+        }
+      },
+      {
+        Sid       = "DenyInsecureTransport"
+        Effect    = "Deny"
+        Principal = { AWS = "*" }
+        Action    = "*"
+        Resource  = aws_efs_file_system.ledger[0].arn
+        Condition = {
+          Bool = { "aws:SecureTransport" = "false" }
+        }
+      },
+    ]
+  })
+}
+
 # The task. The smallest Fargate size, on ARM because it is the cheaper of
 # the two and the image is published for both. The root filesystem is
 # read-only; the ledger directory is the EFS access point above, or, with
@@ -402,6 +444,19 @@ resource "aws_ecs_service" "this" {
 
   tags = var.tags
 
-  # A task cannot mount the ledger before a mount target exists in its AZ.
-  depends_on = [aws_efs_mount_target.ledger]
+  # The task definition references the roles and secrets, but not their
+  # policies or values. Without these, the first task can start before it may
+  # read the secrets or mount the ledger, and destroy can remove the
+  # permissions while the task still runs. A task also cannot mount the
+  # ledger before a mount target exists in its AZ.
+  depends_on = [
+    aws_iam_role_policy_attachment.execution,
+    aws_iam_role_policy.read_secrets,
+    aws_iam_role_policy.mount_ledger,
+    aws_secretsmanager_secret_version.api_key,
+    aws_secretsmanager_secret_version.database_url,
+    aws_secretsmanager_secret_version.hash_secret,
+    aws_efs_mount_target.ledger,
+    aws_efs_file_system_policy.ledger,
+  ]
 }

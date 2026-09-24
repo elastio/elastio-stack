@@ -38,11 +38,21 @@ variable "publication" {
 variable "subnet_ids" {
   description = "Subnets the task runs in. They must reach the database and the server URL."
   type        = list(string)
+
+  validation {
+    condition     = length(var.subnet_ids) > 0
+    error_message = "subnet_ids must contain at least one subnet."
+  }
 }
 
 variable "security_group_ids" {
   description = "Security groups attached to the task. The database's own security group must admit them on its port."
   type        = list(string)
+
+  validation {
+    condition     = length(var.security_group_ids) > 0
+    error_message = "security_group_ids must contain at least one security group. The EFS mount targets admit NFS only from these groups."
+  }
 }
 
 variable "image" {
@@ -61,6 +71,11 @@ variable "log_retention_days" {
   description = "How long CloudWatch keeps the agent's log."
   type        = number
   default     = 7
+
+  validation {
+    condition     = contains([0, 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653], var.log_retention_days)
+    error_message = "log_retention_days must be a value CloudWatch Logs accepts: 0 (never expire), 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288 or 3653."
+  }
 }
 
 variable "persistent_ledger" {
