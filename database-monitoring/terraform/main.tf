@@ -362,11 +362,13 @@ resource "aws_efs_file_system_policy" "ledger" {
   })
 }
 
-# The task. The smallest Fargate size, on ARM because it is the cheaper of
-# the two and the image is published for both. The root filesystem is
-# read-only; the ledger directory is the EFS access point above, or, with
-# persistent_ledger = false, a bind mount onto the task's ephemeral storage,
-# which Fargate creates writable for the container's uid.
+# The task. By default the smallest Fargate size (see task_cpu and
+# task_memory), on ARM because it is the cheaper of the two and the image is
+# published for both. The root filesystem is read-only; the ledger directory
+# is the EFS access point above, or, with persistent_ledger = false, a bind
+# mount onto the task's ephemeral storage. That mount is writable when the
+# image has a VOLUME at the ledger directory owned by uid 65532: ECS copies a
+# VOLUME at the container path into the bind mount, owner included.
 
 resource "aws_ecs_task_definition" "this" {
   family                   = local.ecs_name
