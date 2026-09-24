@@ -1,0 +1,6 @@
+[module]
+name    = "aws-elastio-database-monitoring-agent"
+version = "0.1.0"
+
+description = "Terraform module that runs the Elastio database monitoring agent on AWS Fargate"
+type        = "terraform"
