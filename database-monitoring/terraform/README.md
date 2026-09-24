@@ -61,7 +61,7 @@ A security group with the usual allow-all egress already allows all three. The d
   - a security group `elastio-dbmon-<name>-efs-*` on the mount targets, which allows TCP 2049 only from `security_group_ids`;
   - an access point that maps every client to uid/gid 65532 and roots it at `/elastio-dbmon`, created with mode 0700;
   - a task-role policy that allows `elasticfilesystem:ClientMount` and `ClientWrite` on the file system, only through that access point.
-  - a file system policy that denies every principal except the task role, every mount that does not use that access point, and every client that does not use TLS.
+  - a file system policy that refuses anonymous clients and denies every mount that does not use that access point or TLS. Other roles in the account with their own EFS permissions can still mount through the access point if the network admits them, so keep `security_group_ids` for the agent only.
 - A Fargate task definition: 0.25 vCPU, 0.5 GB, ARM64, with a read-only root filesystem. The task runs as the image's non-root user.
 - A service with `desired_count = 1`. Its deployment policy (minimum healthy 0%, maximum 100%) stops the old task before it starts the new one. A replication slot allows only one consumer at a time, and the ledger allows only one writer. Don't raise the maximum.
 

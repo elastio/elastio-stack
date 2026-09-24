@@ -95,8 +95,8 @@ run "same_az_two_subnets" {
     error_message = "the file system policy must admit the task only through the access point"
   }
   assert {
-    condition     = toset([for st in jsondecode(aws_efs_file_system_policy.ledger[0].policy).Statement : st.Sid if st.Effect == "Deny"]) == toset(["DenyOtherPrincipals", "DenyWithoutAccessPoint", "DenyInsecureTransport"])
-    error_message = "the file system policy must deny other principals, access without the access point, and access without TLS"
+    condition     = toset([for st in jsondecode(aws_efs_file_system_policy.ledger[0].policy).Statement : st.Sid if st.Effect == "Deny"]) == toset(["DenyWithoutAccessPoint", "DenyInsecureTransport"])
+    error_message = "the file system policy must deny access without the access point and access without TLS"
   }
 }
 

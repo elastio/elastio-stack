@@ -300,11 +300,12 @@ resource "aws_iam_role_policy" "mount_ledger" {
 }
 
 # Without a file system policy, EFS lets any NFS client that reaches a mount
-# target mount it as root. The security groups in `security_group_ids` may be
-# shared with other workloads. EFS admits a client that either its own IAM
-# policy or this policy allows, so an Allow alone does not keep out other
-# roles with EFS permissions. The explicit Denies do: only the task role, only
-# through the access point, and only over TLS.
+# target mount it as root. With this policy, anonymous clients are refused,
+# and every client must use TLS and the module's access point. EFS enforces
+# only a few condition keys for NFS clients, and none identifies the caller,
+# so another role in the account with its own EFS client permissions can
+# still mount through the access point if the network admits it. The EFS
+# security group, which admits only `security_group_ids`, is that boundary.
 
 resource "aws_efs_file_system_policy" "ledger" {
   count = var.persistent_ledger ? 1 : 0
@@ -327,16 +328,6 @@ resource "aws_efs_file_system_policy" "ledger" {
           StringEquals = {
             "elasticfilesystem:AccessPointArn" = aws_efs_access_point.ledger[0].arn
           }
-        }
-      },
-      {
-        Sid       = "DenyOtherPrincipals"
-        Effect    = "Deny"
-        Principal = { AWS = "*" }
-        Action    = "elasticfilesystem:Client*"
-        Resource  = aws_efs_file_system.ledger[0].arn
-        Condition = {
-          ArnNotEquals = { "aws:PrincipalArn" = aws_iam_role.task.arn }
         }
       },
       {
