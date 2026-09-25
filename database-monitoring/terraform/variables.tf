@@ -73,7 +73,7 @@ variable "task_cpu" {
 }
 
 variable "task_memory" {
-  description = "Memory for the Fargate task, in MiB. With task_cpu 256: 512, 1024 or 2048. With 512: 1024 to 4096. With 1024: 2048 to 8192. With 2048: 4096 to 16384. Above 512, in steps of 1024. The agent's Go memory limit, and the largest transaction it holds whole, follow it. Raise it when the Elastio UI says a transaction was too large for the agent to hold."
+  description = "Memory for the Fargate task, in MiB. With task_cpu 256: 512, 1024 or 2048. With 512: 1024 to 4096. With 1024: 2048 to 8192. With 2048: 4096 to 16384. Above 512, in steps of 1024. The agent's Go memory limit follows it. Raise it when the Elastio UI recommends a larger size."
   type        = number
   default     = 512
 
@@ -106,7 +106,7 @@ variable "log_retention_days" {
 }
 
 variable "persistent_ledger" {
-  description = "Keep the agent's ledger on an encrypted EFS file system so it survives task replacement. When false, the ledger is on the task's ephemeral storage and every replacement starts it empty, after which findings standing at the time can never be explained by later activity."
+  description = "Keep the agent's state on an encrypted EFS file system so it persists across task replacement. When false, the state is on the task's ephemeral storage and every replacement starts it empty."
   type        = bool
   default     = true
 }

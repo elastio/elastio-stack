@@ -2,7 +2,7 @@
 #
 # The agent is a single static binary that needs a network path to the
 # database and to the server URL, three secrets, and a small writable directory
-# for its ledger that outlives the task. Everything below is the least that
+# for its state that outlives the task. Everything below is the least that
 # gives it those.
 
 locals {
@@ -23,24 +23,19 @@ locals {
   uid = 65532
   gid = 65532
 
-  # The ledger directory inside the container. It is the agent image's own
-  # writable volume (owned by the nonroot user) from 0.1.5, and the binary's
-  # default ledger path is beneath it. Only the mount point moves with it:
-  # the EFS access point's contents, the ledger and nothing else, are the
-  # same file under either path, because the path is also passed explicitly.
+  # The agent's state directory inside the container. It is the agent image's
+  # own writable volume (owned by the nonroot user) from 0.1.5, and the
+  # binary's default state path is beneath it. The path is also passed
+  # explicitly, so the EFS access point's contents are the same file under
+  # either path.
   ledger_dir = "/var/lib/elastio-dbmon"
 
-  # Task size. The default is the Fargate floor: one agent reads one
-  # database's stream and needs no more for ordinary traffic (measured in
-  # elastio/database-monitoring-agent bench/). What a larger task buys is the
-  # size of the largest transaction the agent holds whole; past that it
-  # judges the transaction from its row counts and says so. See Sizing in the
-  # README.
+  # Task size. The default is the Fargate floor, which is enough for one
+  # database's ordinary traffic. See Sizing in the README.
   task_cpu    = var.task_cpu
   task_memory = var.task_memory
 
-  # The Go runtime's soft memory limit, 80% of the task, and so the budget
-  # for one open transaction (30% of this). Go does not derive one from the
+  # The Go runtime's soft memory limit, 80% of the task. Go does not derive one from the
   # container on its own, and without it a heap whose live size is half the
   # task is allowed to double before it is collected. The agent derives the
   # same number itself when this is unset (from 0.1.6 through the ECS task
@@ -100,15 +95,10 @@ resource "aws_secretsmanager_secret_version" "database_url" {
   secret_string = var.database_url
 }
 
-# The agent's hashing key, used to minimise evidence before it leaves the
-# database's network. Without it the agent generates one and keeps it beside
-# the ledger, so a lost ledger took the key with it. Here the key is generated
-# once, by Terraform, and outlives every task. It must stay stable for the
-# life of the ledger: evidence minimised under a different key cannot be
-# compared with what the ledger holds, and redelivered transactions would be
-# refused as conflicting. So never taint or replace it while a ledger exists.
-# 32 random bytes, hex-encoded: 64 characters, the same shape the agent
-# generates for itself.
+# A random key for the agent, generated once by Terraform so that it outlives
+# every task. It must stay the same for the life of the agent's state, so
+# never taint or replace it while that state exists. 32 random bytes,
+# hex-encoded.
 
 resource "random_id" "hash_secret" {
   byte_length = 32
@@ -127,7 +117,7 @@ resource "aws_secretsmanager_secret_version" "hash_secret" {
 
 # Roles. The execution role is ECS's own: pull the image, read the secrets,
 # write logs. The task role is what the process would assume if it called
-# AWS, and it never does. With a persistent ledger it is also the identity the
+# AWS, and it never does. With persistent state it is also the identity the
 # EFS mount helper presents, and carries exactly the permission to mount and
 # write the file system through the module's access point.
 
@@ -183,12 +173,10 @@ resource "aws_iam_role" "task" {
   tags               = var.tags
 }
 
-# The ledger's storage. The agent's review re-reads a standing finding's
-# original window from the ledger to decide whether later activity explains
-# it; a ledger that starts empty after a task replacement has lost that
-# window, and the finding can then never be explained. Task replacements are
-# routine (a deploy, a forced new deployment, a crash, Fargate's own platform
-# maintenance), so by default the ledger lives on EFS and survives them.
+# Storage for the agent's state, so it persists across task replacement.
+# Task replacements are routine (a deploy, a forced new deployment, a crash,
+# Fargate's own platform maintenance), so by default the state lives on EFS
+# and survives them.
 #
 # One mount target per distinct availability zone among the subnets: EFS
 # admits one per AZ, and two subnets in the same AZ share it.
@@ -364,10 +352,10 @@ resource "aws_efs_file_system_policy" "ledger" {
 
 # The task. By default the smallest Fargate size (see task_cpu and
 # task_memory), on ARM because it is the cheaper of the two and the image is
-# published for both. The root filesystem is read-only; the ledger directory
+# published for both. The root filesystem is read-only; the state directory
 # is the EFS access point above, or, with persistent_ledger = false, a bind
 # mount onto the task's ephemeral storage. That mount is writable when the
-# image has a VOLUME at the ledger directory owned by uid 65532: ECS copies a
+# image has a VOLUME at the state directory owned by uid 65532: ECS copies a
 # VOLUME at the container path into the bind mount, owner included.
 
 resource "aws_ecs_task_definition" "this" {
