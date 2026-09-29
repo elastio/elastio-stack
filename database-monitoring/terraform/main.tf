@@ -35,14 +35,140 @@ locals {
   task_cpu    = var.task_cpu
   task_memory = var.task_memory
 
-  # The Go runtime's soft memory limit, 80% of the task. Go does not derive one from the
+  # Content analysis: Elastio's encryption detector (ED) as a second
+  # container. It takes ed_memory of the task, as a hard limit, and the agent
+  # the rest -- so the agent's Go memory limit below is 80% of the agent's
+  # share, not of the task. Measured on the arm64 image with one worker:
+  # 158 MiB idle, 231 MiB after judging a window.
+  content_analysis = var.content_analysis
+  ed_memory        = 384
+  ed_port          = 50051
+  ed_scratch_dir   = "/var/lib/elastio-dbmon-ed"
+  agent_memory     = local.task_memory - (local.content_analysis ? local.ed_memory : 0)
+
+  # The Go runtime's soft memory limit, 80% of the agent's memory. Go does not derive one from the
   # container on its own, and without it a heap whose live size is half the
   # task is allowed to double before it is collected. The agent derives the
   # same number itself when this is unset (from 0.1.6 through the ECS task
   # metadata, because a Fargate task's limit is on the task and the
   # container's cgroup reads "max"); it is set here so the number in force
   # is visible in the task definition.
-  gomemlimit = "${floor(local.task_memory * 0.8)}MiB"
+  gomemlimit = "${floor(local.agent_memory * 0.8)}MiB"
+
+  # The agent's container, and ED's beside it when content analysis is on.
+  agent_container = merge(local.agent_container_base,
+    # With content analysis on, the agent's container is limited to its
+    # share, so the task's memory is not what it reads as its own. Off, the
+    # key is absent and the task definition is what it always was.
+    local.content_analysis ? { memory = local.agent_memory } : {},
+  )
+
+  agent_container_base = {
+    name      = "${local.prefix}-agent"
+    image     = var.image
+    essential = true
+    user      = "${local.uid}:${local.gid}"
+
+    readonlyRootFilesystem = true
+
+    mountPoints = concat(
+      [
+        {
+          sourceVolume  = "ledger"
+          containerPath = local.ledger_dir
+          readOnly      = false
+        },
+      ],
+      local.content_analysis ? [
+        {
+          sourceVolume  = "ed-scratch"
+          containerPath = local.ed_scratch_dir
+          readOnly      = false
+        },
+      ] : [],
+    )
+
+    # The ELASTIO_DBMON_* names are the agent binary's configuration
+    # contract from 0.1.5. The agent still reads the QUELL_* names older
+    # deployments set, but an image older than 0.1.5 reads only those, so
+    # this module needs agent 0.1.5 or later.
+    environment = concat(
+      [
+        { name = "ELASTIO_DBMON_SERVER_URL", value = var.server_url },
+        { name = "ELASTIO_DBMON_SLOT", value = var.slot },
+        { name = "ELASTIO_DBMON_PUBLICATION", value = var.publication },
+        { name = "ELASTIO_DBMON_AGENT_NAME", value = var.name },
+        { name = "ELASTIO_DBMON_LEDGER_PATH", value = "${local.ledger_dir}/ledger" },
+        { name = "GOMEMLIMIT", value = local.gomemlimit },
+      ],
+      local.content_analysis ? [
+        { name = "ELASTIO_DBMON_ED_ADDR", value = "127.0.0.1:${local.ed_port}" },
+        { name = "ELASTIO_DBMON_ED_SCRATCH_DIR", value = local.ed_scratch_dir },
+      ] : [],
+    )
+
+    secrets = [
+      { name = "ELASTIO_DBMON_API_KEY", valueFrom = aws_secretsmanager_secret.api_key.arn },
+      { name = "ELASTIO_DBMON_DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
+      { name = "ELASTIO_DBMON_HASH_SECRET", valueFrom = aws_secretsmanager_secret.hash_secret.arn },
+    ]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.this.name
+        "awslogs-region"        = local.region
+        "awslogs-stream-prefix" = "agent"
+      }
+    }
+  }
+
+  # ED reads each sample by its path, so it mounts the scratch volume at the
+  # same path, read-only. It runs as the agent's user: the agent writes
+  # samples readable by that user alone. Not essential: an ED that stops
+  # costs a window its verdict and nothing else -- the agent judges without
+  # one and says so -- and ECS restarts it.
+  #
+  # The gRPC port is bound to loopback, so only the agent reaches it. The
+  # Prometheus metrics port is NOT: ED's Python server starts it with
+  # start_http_server(port) and no address, so it listens on every interface
+  # of the task ENI whatever --host says (verified on the image, ED 624e66b;
+  # still so on ED master). It serves counters and timings, never values,
+  # and the task's security groups are what keep it in: they must not admit
+  # inbound TCP 50052. The agent needs no inbound rule at all.
+  ed_container = {
+    name      = "${local.prefix}-ed"
+    image     = var.ed_image
+    essential = false
+    user      = "${local.uid}:${local.gid}"
+    memory    = local.ed_memory
+
+    command = [
+      "--host", "127.0.0.1",
+      "--port", tostring(local.ed_port),
+      "--metrics-port", tostring(local.ed_port + 1),
+      "--workers", "1",
+    ]
+
+    restartPolicy = { enabled = true }
+
+    mountPoints = [
+      {
+        sourceVolume  = "ed-scratch"
+        containerPath = local.ed_scratch_dir
+        readOnly      = true
+      },
+    ]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.this.name
+        "awslogs-region"        = local.region
+        "awslogs-stream-prefix" = "ed"
+      }
+    }
+  }
 }
 
 resource "aws_ecs_cluster" "this" {
@@ -376,6 +502,19 @@ resource "aws_ecs_task_definition" "this" {
     size_in_gib = 21 # the Fargate minimum
   }
 
+  # A window's sample, written by the agent for ED to read and removed once
+  # it answers. Task-local storage, never the ledger's EFS: the values must
+  # not outlive the task, and the agent refuses a scratch directory inside
+  # the ledger's. Writable by the agent because its image owns a VOLUME at
+  # that path, as for the ledger below.
+  dynamic "volume" {
+    for_each = local.content_analysis ? [1] : []
+
+    content {
+      name = "ed-scratch"
+    }
+  }
+
   volume {
     name = "ledger"
 
@@ -394,52 +533,9 @@ resource "aws_ecs_task_definition" "this" {
     }
   }
 
-  container_definitions = jsonencode([
-    {
-      name      = "${local.prefix}-agent"
-      image     = var.image
-      essential = true
-      user      = "${local.uid}:${local.gid}"
-
-      readonlyRootFilesystem = true
-
-      mountPoints = [
-        {
-          sourceVolume  = "ledger"
-          containerPath = local.ledger_dir
-          readOnly      = false
-        },
-      ]
-
-      # The ELASTIO_DBMON_* names are the agent binary's configuration
-      # contract from 0.1.5. The agent still reads the QUELL_* names older
-      # deployments set, but an image older than 0.1.5 reads only those, so
-      # this module needs agent 0.1.5 or later.
-      environment = [
-        { name = "ELASTIO_DBMON_SERVER_URL", value = var.server_url },
-        { name = "ELASTIO_DBMON_SLOT", value = var.slot },
-        { name = "ELASTIO_DBMON_PUBLICATION", value = var.publication },
-        { name = "ELASTIO_DBMON_AGENT_NAME", value = var.name },
-        { name = "ELASTIO_DBMON_LEDGER_PATH", value = "${local.ledger_dir}/ledger" },
-        { name = "GOMEMLIMIT", value = local.gomemlimit },
-      ]
-
-      secrets = [
-        { name = "ELASTIO_DBMON_API_KEY", valueFrom = aws_secretsmanager_secret.api_key.arn },
-        { name = "ELASTIO_DBMON_DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
-        { name = "ELASTIO_DBMON_HASH_SECRET", valueFrom = aws_secretsmanager_secret.hash_secret.arn },
-      ]
-
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.this.name
-          "awslogs-region"        = local.region
-          "awslogs-stream-prefix" = "agent"
-        }
-      }
-    },
-  ])
+  container_definitions = jsonencode(
+    concat([local.agent_container], local.content_analysis ? [local.ed_container] : [])
+  )
 
   tags = var.tags
 }

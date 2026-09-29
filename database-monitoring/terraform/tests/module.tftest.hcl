@@ -135,8 +135,8 @@ run "names_and_image" {
     error_message = "secrets must be named elastio-dbmon/<name>/..."
   }
   assert {
-    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "\"image\":\"public.ecr.aws/elastio/elastio-database-monitoring-agent:0.1.6\"")
-    error_message = "the default image must be Elastio's public ECR image of agent 0.1.6, the first to report oversized transactions and read its limit on Fargate"
+    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "\"image\":\"public.ecr.aws/elastio/elastio-database-monitoring-agent:0.1.7\"")
+    error_message = "the default image must be Elastio's public ECR image of agent 0.1.7, the first that can ask the encryption detector"
   }
 }
 
@@ -269,4 +269,96 @@ run "ephemeral" {
     condition     = output.ledger_file_system_id == null
     error_message = "ledger_file_system_id must be null without EFS"
   }
+}
+
+# Content analysis on: the encryption detector runs beside the agent, the two
+# share a task-local scratch volume at the same path, and the agent's memory
+# -- and so its Go memory limit -- is its share of the task, not the task.
+run "content_analysis_runs_the_detector_beside_the_agent" {
+  command = plan
+
+  variables {
+    content_analysis = true
+    task_cpu         = 512
+    task_memory      = 1024
+  }
+
+  assert {
+    condition     = length(jsondecode(aws_ecs_task_definition.this.container_definitions)) == 2
+    error_message = "content analysis must add the detector as a second container"
+  }
+  assert {
+    condition = alltrue([
+      for c in jsondecode(aws_ecs_task_definition.this.container_definitions) :
+      c.user == "65532:65532"
+    ])
+    error_message = "the detector must run as the agent's user, which alone can read the samples"
+  }
+  assert {
+    condition = one([
+      for c in jsondecode(aws_ecs_task_definition.this.container_definitions) : c
+      if c.name == "elastio-dbmon-ed"
+    ]).essential == false
+    error_message = "a stopped detector must cost a window its verdict, not stop the agent"
+  }
+  assert {
+    condition = one([
+      for c in jsondecode(aws_ecs_task_definition.this.container_definitions) : c
+      if c.name == "elastio-dbmon-ed"
+    ]).mountPoints[0].readOnly == true
+    error_message = "the detector reads the scratch volume and never writes it"
+  }
+  assert {
+    condition = one([
+      for c in jsondecode(aws_ecs_task_definition.this.container_definitions) : c
+      if c.name == "elastio-dbmon-agent"
+    ]).memory == 640
+    error_message = "the agent's container must be limited to the task less the detector's 384 MiB"
+  }
+  assert {
+    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "{\"name\":\"GOMEMLIMIT\",\"value\":\"512MiB\"}")
+    error_message = "GOMEMLIMIT must be 80% of the agent's share (640 MiB), not of the task"
+  }
+  assert {
+    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "{\"name\":\"ELASTIO_DBMON_ED_ADDR\",\"value\":\"127.0.0.1:50051\"}")
+    error_message = "the agent must be told where the detector listens"
+  }
+  assert {
+    condition     = length([for v in aws_ecs_task_definition.this.volume : v if v.name == "ed-scratch" && length(v.efs_volume_configuration) == 0]) == 1
+    error_message = "the scratch volume must be task-local, never EFS"
+  }
+  assert {
+    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "elastio-database-monitoring-ed:0.1.7")
+    error_message = "the detector defaults to the image released with the default agent"
+  }
+}
+
+# Off, the default: exactly the task this module always made.
+run "content_analysis_is_off_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(jsondecode(aws_ecs_task_definition.this.container_definitions)) == 1
+    error_message = "content analysis must be opted into"
+  }
+  assert {
+    condition     = !strcontains(aws_ecs_task_definition.this.container_definitions, "ELASTIO_DBMON_ED_")
+    error_message = "with content analysis off the agent must not be pointed at a detector"
+  }
+  assert {
+    condition     = length(aws_ecs_task_definition.this.volume) == 1
+    error_message = "with content analysis off there is no scratch volume"
+  }
+}
+
+# Too small a task for both is refused, not planned.
+run "content_analysis_needs_room_for_the_detector" {
+  command = plan
+
+  variables {
+    content_analysis = true
+    task_memory      = 512
+  }
+
+  expect_failures = [var.content_analysis]
 }

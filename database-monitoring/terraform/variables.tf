@@ -58,7 +58,26 @@ variable "security_group_ids" {
 variable "image" {
   description = "Agent image. The default is the agent release this module version was tested with. Pin a version; :latest moves. Needs 0.1.5 or later: older agents read only the QUELL_* variable names."
   type        = string
-  default     = "public.ecr.aws/elastio/elastio-database-monitoring-agent:0.1.6"
+  default     = "public.ecr.aws/elastio/elastio-database-monitoring-agent:0.1.7"
+}
+
+variable "content_analysis" {
+  description = "Run Elastio's encryption detector beside the agent, so a table whose rows are overwritten with ciphertext is reported as a high-severity finding even where no rewrite limit is declared. The agent samples the rewritten values in memory and on task-local storage only, for the detector to read; only the verdict leaves the task. Needs agent 0.1.7 or later and task_memory of at least 1024."
+  type        = bool
+  default     = false
+
+  # The detector takes 384 MiB of the task. Below 1024 the agent's share is
+  # smaller than the smallest task it is sized for on its own.
+  validation {
+    condition     = !var.content_analysis || var.task_memory >= 1024
+    error_message = "content_analysis needs task_memory of at least 1024: the encryption detector takes 384 MiB of the task, and the agent needs the rest."
+  }
+}
+
+variable "ed_image" {
+  description = "Encryption detector image, used when content_analysis is true: Elastio's ED gRPC server, built for amd64 and arm64 from the elastio/ed commit the agent release pins. The default is the one released with the default agent image."
+  type        = string
+  default     = "public.ecr.aws/elastio/elastio-database-monitoring-ed:0.1.7"
 }
 
 variable "task_cpu" {
