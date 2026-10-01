@@ -58,7 +58,7 @@ variable "security_group_ids" {
 variable "image" {
   description = "Agent image. The default is the agent release this module version was tested with. Pin a version; :latest moves. Needs 0.1.5 or later: older agents read only the QUELL_* variable names."
   type        = string
-  default     = "public.ecr.aws/elastio/elastio-database-monitoring-agent:0.1.7"
+  default     = "public.ecr.aws/elastio/elastio-database-monitoring-agent:0.1.8"
 }
 
 variable "content_analysis" {
@@ -77,7 +77,7 @@ variable "content_analysis" {
 variable "ed_image" {
   description = "Encryption detector image, used when content_analysis is true: Elastio's ED gRPC server, built for amd64 and arm64 from the elastio/ed commit the agent release pins. The default is the one released with the default agent image."
   type        = string
-  default     = "public.ecr.aws/elastio/elastio-database-monitoring-ed:0.1.7"
+  default     = "public.ecr.aws/elastio/elastio-database-monitoring-ed:0.1.8"
 }
 
 variable "task_cpu" {

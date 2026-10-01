@@ -129,13 +129,9 @@ locals {
   # costs a window its verdict and nothing else -- the agent judges without
   # one and says so -- and ECS restarts it.
   #
-  # The gRPC port is bound to loopback, so only the agent reaches it. The
-  # Prometheus metrics port is NOT: ED's Python server starts it with
-  # start_http_server(port) and no address, so it listens on every interface
-  # of the task ENI whatever --host says (verified on the image, ED 624e66b;
-  # still so on ED master). It serves counters and timings, never values,
-  # and the task's security groups are what keep it in: they must not admit
-  # inbound TCP 50052. The agent needs no inbound rule at all.
+  # Both ports, gRPC and Prometheus metrics, are bound to loopback, so only
+  # the agent reaches them (ED from ce003e0, elastio/ed#42; earlier ED bound
+  # metrics to every interface). The agent needs no inbound rule at all.
   ed_container = {
     name      = "${local.prefix}-ed"
     image     = var.ed_image

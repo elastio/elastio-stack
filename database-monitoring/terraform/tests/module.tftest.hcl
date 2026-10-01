@@ -135,8 +135,8 @@ run "names_and_image" {
     error_message = "secrets must be named elastio-dbmon/<name>/..."
   }
   assert {
-    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "\"image\":\"public.ecr.aws/elastio/elastio-database-monitoring-agent:0.1.7\"")
-    error_message = "the default image must be Elastio's public ECR image of agent 0.1.7, the first that can ask the encryption detector"
+    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "\"image\":\"public.ecr.aws/elastio/elastio-database-monitoring-agent:0.1.8\"")
+    error_message = "the default image must be Elastio's public ECR image of agent 0.1.8"
   }
 }
 
@@ -328,7 +328,7 @@ run "content_analysis_runs_the_detector_beside_the_agent" {
     error_message = "the scratch volume must be task-local, never EFS"
   }
   assert {
-    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "elastio-database-monitoring-ed:0.1.7")
+    condition     = strcontains(aws_ecs_task_definition.this.container_definitions, "elastio-database-monitoring-ed:0.1.8")
     error_message = "the detector defaults to the image released with the default agent"
   }
 }
