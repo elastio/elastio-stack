@@ -362,3 +362,27 @@ run "content_analysis_needs_room_for_the_detector" {
 
   expect_failures = [var.content_analysis]
 }
+
+run "runtime_update_images_survive_size_changes" {
+  command = plan
+  variables {
+    runtime_updates  = true
+    content_analysis = true
+    task_cpu         = 1024
+    task_memory      = 2048
+    image            = "old-agent:0.1.9"
+    ed_image         = "old-python:0.1.9"
+  }
+  override_data {
+    target = data.aws_ecs_service.runtime[0]
+    values = { task_definition = "arn:aws:ecs:us-east-1:123456789012:task-definition/runtime:7" }
+  }
+  override_data {
+    target = data.aws_ecs_task_definition.runtime[0]
+    values = { container_definitions = "[{\"name\":\"elastio-dbmon-agent\",\"image\":\"agent@sha256:new\"},{\"name\":\"elastio-dbmon-ed\",\"image\":\"native@sha256:new\"}]" }
+  }
+  assert {
+    condition     = local.agent_container.image == "agent@sha256:new" && local.ed_container.image == "native@sha256:new" && aws_ecs_task_definition.this.cpu == "1024"
+    error_message = "Sizing must preserve the images selected by Elastio, including native ED."
+  }
+}

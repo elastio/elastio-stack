@@ -65,7 +65,7 @@ locals {
 
   agent_container_base = {
     name      = "${local.prefix}-agent"
-    image     = var.image
+    image     = lookup(local.runtime_images, "elastio-dbmon-agent", var.image)
     essential = true
     user      = "${local.uid}:${local.gid}"
 
@@ -134,7 +134,7 @@ locals {
   # metrics to every interface). The agent needs no inbound rule at all.
   ed_container = {
     name      = "${local.prefix}-ed"
-    image     = var.ed_image
+    image     = lookup(local.runtime_images, "elastio-dbmon-ed", var.ed_image)
     essential = false
     user      = "${local.uid}:${local.gid}"
     memory    = local.ed_memory

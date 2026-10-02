@@ -223,3 +223,19 @@ No modules.
 | <a name="output_task_role_arn"></a> [task_role_arn](#output_task_role_arn)                         | IAM role the running container assumes. The agent has no AWS code; with persistent state the role may mount the state file system, and nothing else. |
 
 <!-- END_TF_DOCS -->
+
+## Runtime image upgrades
+
+After the first deployment, set `runtime_updates = true` when installing the
+Elastio deployment updater. Manual updates and optional automatic upgrades are
+then controlled through Elastio. Terraform continues to own infrastructure and
+CPU/memory sizing. During a size change or later apply, the module reads the
+service's current task definition and preserves its agent and detector images,
+including immutable digests selected by the updater. It does not reset them to
+the module's older `image` defaults. Do not enable this option on a first-ever
+apply: the service must exist for its deployed images to be read.
+
+The updater runs separately from the monitored task with permission to update
+only its configured ECS service and pass the existing task/execution roles.
+Installation and Docker/VM equivalents are documented in the
+[agent updater guide](https://github.com/elastio/database-monitoring-agent/tree/master/deploy/updater).
