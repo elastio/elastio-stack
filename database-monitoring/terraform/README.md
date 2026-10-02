@@ -65,6 +65,7 @@ A security group with the usual allow-all egress already allows all three. The d
 - A Fargate task definition of `task_cpu` and `task_memory` (by default 0.25 vCPU and 0.5 GB), ARM64, with a read-only root filesystem. The task runs as the image's non-root user, with `GOMEMLIMIT` set to 80% of the agent's memory: `task_memory`, less 384 MiB with `content_analysis = true`.
 - With `content_analysis = true`, a second container in the same task, running Elastio's encryption detector (`ed_image`) as the agent's non-root user. Its gRPC and metrics ports listen on loopback only. The agent needs no inbound rules at all. It reads a task-local scratch volume at `/var/lib/elastio-dbmon-ed`, read-only; see **Content analysis** below.
 - A service with `desired_count = 1`. Its deployment policy (minimum healthy 0%, maximum 100%) stops the old task before it starts the new one. A replication slot allows only one consumer at a time, and the agent's state allows only one writer. Don't raise the maximum.
+- With `updater = true`, a second service in the same cluster, `<name>-updater`, running Elastio's deployment updater; see **Runtime image upgrades** below.
 
 ## Content analysis
 
@@ -113,6 +114,7 @@ The other sizes are in the Sizing table above. On top of the task:
 
 - **Secrets Manager:** three secrets at $0.40 each, so $1.20 a month.
 - **EFS:** the agent's state stays at tens of MB, which is cents a month. Mount targets and access points are free.
+- **Updater:** with `updater = true`, a second task of the smallest size, so another $7.21 a month.
 - **Ephemeral storage and CloudWatch:** the extra GB of ephemeral storage above the free 20 GB, and CloudWatch log ingestion, each cost a few cents.
 
 If the subnets use a NAT gateway, its hourly charge will be your largest cost by far. You pay that charge whether or not you deploy this module.
@@ -153,8 +155,8 @@ terraform init -backend=false && terraform test
 
 | Name                                                      | Version |
 | --------------------------------------------------------- | ------- |
-| <a name="provider_aws"></a> [aws](#provider_aws)          | >= 5.0  |
-| <a name="provider_random"></a> [random](#provider_random) | >= 3.0  |
+| <a name="provider_aws"></a> [aws](#provider_aws)          | 6.67.0  |
+| <a name="provider_random"></a> [random](#provider_random) | 3.9.1   |
 
 ## Modules
 
@@ -167,16 +169,23 @@ No modules.
 | [aws_cloudwatch_log_group.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group)                                 | resource    |
 | [aws_ecs_cluster.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_cluster)                                                   | resource    |
 | [aws_ecs_service.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_service)                                                   | resource    |
+| [aws_ecs_service.updater](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_service)                                                | resource    |
 | [aws_ecs_task_definition.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_task_definition)                                   | resource    |
+| [aws_ecs_task_definition.updater](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_task_definition)                                | resource    |
 | [aws_efs_access_point.ledger](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/efs_access_point)                                       | resource    |
 | [aws_efs_file_system.ledger](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/efs_file_system)                                         | resource    |
 | [aws_efs_file_system_policy.ledger](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/efs_file_system_policy)                           | resource    |
 | [aws_efs_mount_target.ledger](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/efs_mount_target)                                       | resource    |
 | [aws_iam_role.execution](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role)                                                    | resource    |
 | [aws_iam_role.task](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role)                                                         | resource    |
+| [aws_iam_role.updater_execution](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role)                                            | resource    |
+| [aws_iam_role.updater_task](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role)                                                 | resource    |
 | [aws_iam_role_policy.mount_ledger](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy)                                   | resource    |
 | [aws_iam_role_policy.read_secrets](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy)                                   | resource    |
+| [aws_iam_role_policy.updater_deploy_agent](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy)                           | resource    |
+| [aws_iam_role_policy.updater_read_api_key](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy)                           | resource    |
 | [aws_iam_role_policy_attachment.execution](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment)                | resource    |
+| [aws_iam_role_policy_attachment.updater_execution](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment)        | resource    |
 | [aws_secretsmanager_secret.api_key](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret)                            | resource    |
 | [aws_secretsmanager_secret.database_url](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret)                       | resource    |
 | [aws_secretsmanager_secret.hash_secret](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret)                        | resource    |
@@ -194,6 +203,7 @@ No modules.
 
 | Name                                                                                    | Description                                                                                                                                                                                                                                                                                                                                                                                         | Type           | Default                                                            | Required |
 | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------ | :------: |
+| <a name="input_agent_id"></a> [agent_id](#input_agent_id)                               | The agent's ID in Elastio, a UUID: the agent logs it on every start as "registered as <id>" in this module's log group. Required when updater = true: the updater cannot discover it, and without it it runs but never updates the agent.                                                                                                                                                           | `string`       | `""`                                                               |    no    |
 | <a name="input_api_key"></a> [api_key](#input_api_key)                                  | Bearer token the agent presents to the server. Stored in Secrets Manager, never in the task definition.                                                                                                                                                                                                                                                                                             | `string`       | n/a                                                                |   yes    |
 | <a name="input_assign_public_ip"></a> [assign_public_ip](#input_assign_public_ip)       | Give the task a public IP. Needed only when the subnets have no NAT gateway and the server URL is on the internet.                                                                                                                                                                                                                                                                                  | `bool`         | `false`                                                            |    no    |
 | <a name="input_content_analysis"></a> [content_analysis](#input_content_analysis)       | Run Elastio's encryption detector beside the agent, so a table whose rows are overwritten with ciphertext is reported as a high-severity finding even where no rewrite limit is declared. The agent samples the rewritten values in memory and on task-local storage only, for the detector to read; only the verdict leaves the task. Needs agent 0.1.7 or later and task_memory of at least 1024. | `bool`         | `false`                                                            |    no    |
@@ -212,33 +222,63 @@ No modules.
 | <a name="input_tags"></a> [tags](#input_tags)                                           | Tags applied to every resource the module creates.                                                                                                                                                                                                                                                                                                                                                  | `map(string)`  | `{}`                                                               |    no    |
 | <a name="input_task_cpu"></a> [task_cpu](#input_task_cpu)                               | CPU units for the Fargate task: 256 (0.25 vCPU), 512, 1024 or 2048. Together with task_memory it must be a size Fargate runs on ARM64; see Sizing in the README.                                                                                                                                                                                                                                    | `number`       | `256`                                                              |    no    |
 | <a name="input_task_memory"></a> [task_memory](#input_task_memory)                      | Memory for the Fargate task, in MiB. With task_cpu 256: 512, 1024 or 2048. With 512: 1024 to 4096. With 1024: 2048 to 8192. With 2048: 4096 to 16384. Above 512, in steps of 1024. The agent's Go memory limit follows it. Raise it when the Elastio UI recommends a larger size.                                                                                                                   | `number`       | `512`                                                              |    no    |
+| <a name="input_update_channel"></a> [update_channel](#input_update_channel)             | Release channel the updater installs agents from: production or development.                                                                                                                                                                                                                                                                                                                        | `string`       | `"production"`                                                     |    no    |
+| <a name="input_updater"></a> [updater](#input_updater)                                  | Run Elastio's deployment updater as a second ECS service in the agent's cluster, so an agent update started from Elastio is applied to this service. Requires runtime_updates = true, so a later apply keeps the image the updater deployed. Enable both after the first apply: runtime_updates reads the service, which must exist.                                                                | `bool`         | `false`                                                            |    no    |
+| <a name="input_updater_image"></a> [updater_image](#input_updater_image)                | Deployment updater image, used when updater is true. The default follows update_channel: the updater released with this module version for production, the latest development build for development.                                                                                                                                                                                                | `string`       | `null`                                                             |    no    |
 
 ## Outputs
 
-| Name                                                                                               | Description                                                                                                                                          |
-| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <a name="output_cluster_arn"></a> [cluster_arn](#output_cluster_arn)                               | ARN of the ECS cluster the agent runs in.                                                                                                            |
-| <a name="output_execution_role_arn"></a> [execution_role_arn](#output_execution_role_arn)          | IAM role ECS uses to pull the image, read the three secrets and write logs.                                                                          |
-| <a name="output_hash_secret_arn"></a> [hash_secret_arn](#output_hash_secret_arn)                   | ARN of the Secrets Manager secret holding the agent's key. It must stay stable for the life of the agent's state.                                    |
-| <a name="output_ledger_file_system_id"></a> [ledger_file_system_id](#output_ledger_file_system_id) | ID of the EFS file system holding the agent's state, or null when persistent_ledger is false.                                                        |
-| <a name="output_log_group_name"></a> [log_group_name](#output_log_group_name)                      | CloudWatch log group the agent writes to.                                                                                                            |
-| <a name="output_service_name"></a> [service_name](#output_service_name)                            | Name of the ECS service.                                                                                                                             |
-| <a name="output_task_role_arn"></a> [task_role_arn](#output_task_role_arn)                         | IAM role the running container assumes. The agent has no AWS code; with persistent state the role may mount the state file system, and nothing else. |
+| Name                                                                                               | Description                                                                                                                                                                             |
+| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <a name="output_cluster_arn"></a> [cluster_arn](#output_cluster_arn)                               | ARN of the ECS cluster the agent runs in.                                                                                                                                               |
+| <a name="output_execution_role_arn"></a> [execution_role_arn](#output_execution_role_arn)          | IAM role ECS uses to pull the image, read the three secrets and write logs.                                                                                                             |
+| <a name="output_hash_secret_arn"></a> [hash_secret_arn](#output_hash_secret_arn)                   | ARN of the Secrets Manager secret holding the agent's key. It must stay stable for the life of the agent's state.                                                                       |
+| <a name="output_ledger_file_system_id"></a> [ledger_file_system_id](#output_ledger_file_system_id) | ID of the EFS file system holding the agent's state, or null when persistent_ledger is false.                                                                                           |
+| <a name="output_log_group_name"></a> [log_group_name](#output_log_group_name)                      | CloudWatch log group the agent writes to.                                                                                                                                               |
+| <a name="output_service_name"></a> [service_name](#output_service_name)                            | Name of the ECS service.                                                                                                                                                                |
+| <a name="output_task_role_arn"></a> [task_role_arn](#output_task_role_arn)                         | IAM role the running container assumes. The agent has no AWS code; with persistent state the role may mount the state file system, and nothing else.                                    |
+| <a name="output_updater_service_name"></a> [updater_service_name](#output_updater_service_name)    | Name of the updater's ECS service, or null when updater is false.                                                                                                                       |
+| <a name="output_updater_task_role_arn"></a> [updater_task_role_arn](#output_updater_task_role_arn) | IAM role the updater calls AWS with, or null when updater is false. It may update only the agent's service, register only the agent's task family, and pass only the agent's two roles. |
 
 <!-- END_TF_DOCS -->
 
 ## Runtime image upgrades
 
-After the first deployment, set `runtime_updates = true` when installing the
-Elastio deployment updater. Manual updates and optional automatic upgrades are
-then controlled through Elastio. Terraform continues to own infrastructure and
-CPU/memory sizing. During a size change or later apply, the module reads the
-service's current task definition and preserves its agent and detector images,
-including immutable digests selected by the updater. It does not reset them to
-the module's older `image` defaults. Do not enable this option on a first-ever
-apply: the service must exist for its deployed images to be read.
+With `updater = true`, the module runs Elastio's deployment updater as a second
+ECS service in the agent's cluster, so an agent update started from Elastio is
+applied to this deployment. Terraform keeps owning infrastructure and CPU/memory
+sizing; Elastio owns which agent image runs.
 
-The updater runs separately from the monitored task with permission to update
-only its configured ECS service and pass the existing task/execution roles.
-Installation and Docker/VM equivalents are documented in the
+```tf
+  runtime_updates = true
+  updater         = true
+  agent_id        = "7d0c2b8e-3f1a-4e57-9a7c-1b2c3d4e5f60" # "registered as <id>" in the agent's log
+```
+
+Enable both **after the first apply**. `runtime_updates` reads the service's
+current task definition and keeps its agent and detector images, including the
+digests the updater deployed, so a size change or a later apply does not put
+the module's `image` back. It needs the service to exist, so it fails on a
+first-ever apply. `updater = true` without `runtime_updates = true`, or
+without an `agent_id` that is a UUID, is refused at plan: the updater cannot
+discover the agent's ID, and without it it would run, cost money and never
+update the agent.
+
+The updater:
+
+- runs as one task of 0.25 vCPU and 512 MiB on ARM64, in `subnet_ids` with
+  `security_group_ids`. It needs outbound HTTPS to Elastio, to the image
+  registries and to the ECS API, and no inbound rules;
+- authenticates to Elastio with the agent's API key, read from the agent's
+  secret, and acts for the agent named by `agent_id`;
+- installs from `update_channel`, `production` by default. `updater_image`
+  defaults to the updater released for that channel;
+- logs to the agent's log group, under the `updater/` stream prefix;
+- has its own execution role, which reads only the API-key secret, and its own
+  task role, which may only describe and update the agent's service (and only
+  to a revision of the agent's task family), register revisions of that
+  family, describe task definitions, and pass the agent's task and execution
+  roles to ECS.
+
+How the updater picks, verifies and deploys an image is in the
 [agent updater guide](https://github.com/elastio/database-monitoring-agent/tree/master/deploy/updater).
