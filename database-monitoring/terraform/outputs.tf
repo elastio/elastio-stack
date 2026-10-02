@@ -32,3 +32,13 @@ output "hash_secret_arn" {
   description = "ARN of the Secrets Manager secret holding the agent's key. It must stay stable for the life of the agent's state."
   value       = aws_secretsmanager_secret.hash_secret.arn
 }
+
+output "updater_service_name" {
+  description = "Name of the updater's ECS service, or null when updater is false."
+  value       = local.updater ? aws_ecs_service.updater[0].name : null
+}
+
+output "updater_task_role_arn" {
+  description = "IAM role the updater calls AWS with, or null when updater is false. It may update only the agent's service, register only the agent's task family, and pass only the agent's two roles."
+  value       = local.updater ? aws_iam_role.updater_task[0].arn : null
+}
