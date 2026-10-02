@@ -70,6 +70,40 @@ run "updater_requires_runtime_updates" {
   expect_failures = [var.updater]
 }
 
+# The updater cannot discover the agent's ID; without it the service would
+# run, cost money and never update anything (review on #129).
+run "updater_requires_agent_id" {
+  command = plan
+
+  variables {
+    runtime_updates = true
+    updater         = true
+  }
+
+  expect_failures = [var.agent_id]
+}
+
+run "updater_rejects_agent_id_that_is_not_a_uuid" {
+  command = plan
+
+  variables {
+    runtime_updates = true
+    updater         = true
+    agent_id        = "orders-db"
+  }
+
+  expect_failures = [var.agent_id]
+}
+
+# With the updater off, agent_id stays optional.
+run "agent_id_is_optional_without_the_updater" {
+  command = plan
+
+  variables {
+    agent_id = "anything"
+  }
+}
+
 run "rejects_unknown_update_channel" {
   command = plan
 
@@ -287,6 +321,7 @@ run "updater_development_channel" {
     runtime_updates = true
     updater         = true
     update_channel  = "development"
+    agent_id        = "7d0c2b8e-3f1a-4e57-9a7c-1b2c3d4e5f60"
   }
 
   override_data {
@@ -307,8 +342,8 @@ run "updater_development_channel" {
     error_message = "the updater must be told its channel"
   }
   assert {
-    condition     = contains(local.updater_container.environment, { name = "ELASTIO_DBMON_AGENT_ID", value = "" })
-    error_message = "without agent_id the updater is given an empty ID, and asks Elastio for it"
+    condition     = contains(local.updater_container.environment, { name = "ELASTIO_DBMON_AGENT_ID", value = "7d0c2b8e-3f1a-4e57-9a7c-1b2c3d4e5f60" })
+    error_message = "the updater must be given the agent's ID"
   }
 }
 
@@ -319,6 +354,7 @@ run "updater_image_override" {
     runtime_updates = true
     updater         = true
     updater_image   = "example.com/mirror/updater@sha256:abc"
+    agent_id        = "7d0c2b8e-3f1a-4e57-9a7c-1b2c3d4e5f60"
   }
 
   override_data {

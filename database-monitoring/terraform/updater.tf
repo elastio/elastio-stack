@@ -37,9 +37,14 @@ variable "update_channel" {
 }
 
 variable "agent_id" {
-  description = "The agent's ID in Elastio, given to the updater. Optional: when empty, the updater asks Elastio for it with the agent's API key."
+  description = "The agent's ID in Elastio, a UUID: the agent logs it on every start as \"registered as <id>\" in this module's log group. Required when updater = true: the updater cannot discover it, and without it it runs but never updates the agent."
   type        = string
   default     = ""
+
+  validation {
+    condition     = !var.updater || can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", var.agent_id))
+    error_message = "updater = true needs agent_id: the agent's ID in Elastio, a UUID the agent logs on start as \"registered as <id>\". Without it the updater service runs and costs money but never updates the agent."
+  }
 }
 
 locals {

@@ -155,8 +155,8 @@ terraform init -backend=false && terraform test
 
 | Name                                                      | Version |
 | --------------------------------------------------------- | ------- |
-| <a name="provider_aws"></a> [aws](#provider_aws)          | >= 5.0  |
-| <a name="provider_random"></a> [random](#provider_random) | >= 3.0  |
+| <a name="provider_aws"></a> [aws](#provider_aws)          | 6.67.0  |
+| <a name="provider_random"></a> [random](#provider_random) | 3.9.1   |
 
 ## Modules
 
@@ -203,7 +203,7 @@ No modules.
 
 | Name                                                                                    | Description                                                                                                                                                                                                                                                                                                                                                                                         | Type           | Default                                                            | Required |
 | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------ | :------: |
-| <a name="input_agent_id"></a> [agent_id](#input_agent_id)                               | The agent's ID in Elastio, given to the updater. Optional: when empty, the updater asks Elastio for it with the agent's API key.                                                                                                                                                                                                                                                                    | `string`       | `""`                                                               |    no    |
+| <a name="input_agent_id"></a> [agent_id](#input_agent_id)                               | The agent's ID in Elastio, a UUID: the agent logs it on every start as "registered as <id>" in this module's log group. Required when updater = true: the updater cannot discover it, and without it it runs but never updates the agent.                                                                                                                                                           | `string`       | `""`                                                               |    no    |
 | <a name="input_api_key"></a> [api_key](#input_api_key)                                  | Bearer token the agent presents to the server. Stored in Secrets Manager, never in the task definition.                                                                                                                                                                                                                                                                                             | `string`       | n/a                                                                |   yes    |
 | <a name="input_assign_public_ip"></a> [assign_public_ip](#input_assign_public_ip)       | Give the task a public IP. Needed only when the subnets have no NAT gateway and the server URL is on the internet.                                                                                                                                                                                                                                                                                  | `bool`         | `false`                                                            |    no    |
 | <a name="input_content_analysis"></a> [content_analysis](#input_content_analysis)       | Run Elastio's encryption detector beside the agent, so a table whose rows are overwritten with ciphertext is reported as a high-severity finding even where no rewrite limit is declared. The agent samples the rewritten values in memory and on task-local storage only, for the detector to read; only the verdict leaves the task. Needs agent 0.1.7 or later and task_memory of at least 1024. | `bool`         | `false`                                                            |    no    |
@@ -252,14 +252,17 @@ sizing; Elastio owns which agent image runs.
 ```tf
   runtime_updates = true
   updater         = true
+  agent_id        = "7d0c2b8e-3f1a-4e57-9a7c-1b2c3d4e5f60" # "registered as <id>" in the agent's log
 ```
 
 Enable both **after the first apply**. `runtime_updates` reads the service's
 current task definition and keeps its agent and detector images, including the
 digests the updater deployed, so a size change or a later apply does not put
 the module's `image` back. It needs the service to exist, so it fails on a
-first-ever apply. `updater = true` without `runtime_updates = true` is refused
-at plan.
+first-ever apply. `updater = true` without `runtime_updates = true`, or
+without an `agent_id` that is a UUID, is refused at plan: the updater cannot
+discover the agent's ID, and without it it would run, cost money and never
+update the agent.
 
 The updater:
 
@@ -267,7 +270,7 @@ The updater:
   `security_group_ids`. It needs outbound HTTPS to Elastio, to the image
   registries and to the ECS API, and no inbound rules;
 - authenticates to Elastio with the agent's API key, read from the agent's
-  secret. `agent_id` is optional: without it, the updater asks Elastio;
+  secret, and acts for the agent named by `agent_id`;
 - installs from `update_channel`, `production` by default. `updater_image`
   defaults to the updater released for that channel;
 - logs to the agent's log group, under the `updater/` stream prefix;
