@@ -51,7 +51,7 @@ locals {
   updater = var.updater
 
   updater_default_image = {
-    production  = "public.ecr.aws/elastio/elastio-database-monitoring-updater:0.1.11"
+    production  = "public.ecr.aws/elastio/elastio-database-monitoring-updater:0.1.12"
     development = "public.ecr.aws/elastio-development/elastio-database-monitoring-updater:latest"
   }
   updater_image = coalesce(var.updater_image, local.updater_default_image[var.update_channel])
