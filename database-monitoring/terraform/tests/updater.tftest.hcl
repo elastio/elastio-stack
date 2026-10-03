@@ -218,7 +218,7 @@ run "updater_deploys_only_the_agent" {
     error_message = "the updater's only secret is the agent's API key"
   }
   assert {
-    condition     = one(jsondecode(aws_ecs_task_definition.updater[0].container_definitions)).image == "public.ecr.aws/elastio/elastio-database-monitoring-updater:0.1.10"
+    condition     = one(jsondecode(aws_ecs_task_definition.updater[0].container_definitions)).image == "public.ecr.aws/elastio/elastio-database-monitoring-updater:0.1.12"
     error_message = "the production updater defaults to Elastio's public ECR image of this module's release"
   }
   assert {
