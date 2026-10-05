@@ -4,3 +4,5 @@ terraform.tfstate
 terraform.tfstate.backup
 terraform.tfvars
 /node_modules
+.venv
+.mypy_cache
